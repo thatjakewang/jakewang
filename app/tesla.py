@@ -94,7 +94,6 @@ def get_stats(db: Session):
         "total_cost": total_cost,
         "charging_cost": charging_cost,
         "non_charging_cost": car_expense_total,
-        "energy_kwh": round(energy_kwh, 2),
         "avg_price_per_kwh": avg_price_per_kwh,
         "odometer_km": odometer_km,
         "cost_per_km": cost_per_km,
@@ -179,10 +178,7 @@ def get_period_summary(db: Session):
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
             "is_partial": end == today,
-            "charging_cost": charging_cost,
-            "non_charging_cost": non_charging_cost,
             "total_cost": total_cost,
-            "energy_kwh": round(energy_kwh, 2),
             "km_driven": km,
             "energy_cost_per_km": round(charging_cost / km, 2) if km else None,
             "total_cost_per_km": round(total_cost / km, 2) if km else None,
@@ -208,17 +204,14 @@ def get_charging_by_provider(db: Session):
     query = text("""
         SELECT
             provider,
-            COALESCE(SUM(kwh), 0) AS total_kwh,
-            COALESCE(SUM(amount), 0) AS total_amount,
             COALESCE(SUM(amount) / NULLIF(SUM(kwh), 0), 0) AS avg_price_per_kwh,
-            COALESCE(SUM(kwh) FILTER (WHERE amount > 0), 0) AS paid_kwh,
             SUM(amount) FILTER (WHERE amount > 0)
                 / NULLIF(SUM(kwh) FILTER (WHERE amount > 0), 0) AS paid_avg_price_per_kwh,
             COALESCE(SUM(kwh) FILTER (WHERE amount = 0), 0) AS free_kwh,
             COUNT(*) FILTER (WHERE amount = 0) AS free_sessions
         FROM charging_records
         GROUP BY provider
-        ORDER BY total_amount DESC
+        ORDER BY SUM(amount) DESC
     """)
     rows = db.execute(query).mappings().all()
 
@@ -229,14 +222,14 @@ def get_charging_by_provider(db: Session):
 def get_recent_charging_records(db: Session):
     """Return the 10 most recent charging records (newest first)."""
     return fetch_recent(
-        db, "charging_records", "id, charge_date, provider, amount, kwh",
+        db, "charging_records", "charge_date, provider, amount, kwh",
         order_col="charge_date",
     )
 
 
 def get_recent_car_expenses(db: Session):
     """Return the 10 most recent car expense records (newest first)."""
-    return fetch_recent(db, "car_expenses", "id, date, item, amount")
+    return fetch_recent(db, "car_expenses", "date, item, amount")
 
 
 def get_dashboard(db: Session):

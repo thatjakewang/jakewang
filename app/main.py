@@ -24,15 +24,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.config import get_settings
 from app.database import get_db
 from app import tesla
 
-# The Jinja environment keeps its own module; static_url is re-exported here
-# because it was defined here historically.
-from app.templating import STATIC_DIR, static_url, templates  # noqa: F401
-
-settings = get_settings()
+from app.templating import STATIC_DIR, templates
 
 app = FastAPI(
     title="Jake Wang",
