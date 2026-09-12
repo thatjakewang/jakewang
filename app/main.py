@@ -71,19 +71,18 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # How long browsers/proxies may cache public GET responses (seconds).
-# Both data windows are kept short: entries added via iPhone Shortcuts should
-# show up on the dashboard right away — the browser cache can't be invalidated
-# remotely, so this window is the maximum staleness. The dashboard is rendered
-# server-side, so its numbers age with the page, not with /api/. Static assets
-# carry a versioned URL and can be cached for a year.
-API_CACHE_MAX_AGE = 30
+# The page window is kept short because the dashboard's numbers are rendered
+# into it: entries added via iPhone Shortcuts should show up right away, and
+# the browser cache can't be invalidated remotely, so this is the maximum
+# staleness. Static assets carry a versioned URL and can be cached for a year.
+# There is no /api/ window: every remaining API route is a POST.
 PAGE_CACHE_MAX_AGE = 60
 STATIC_CACHE_MAX_AGE = int(timedelta(days=365).total_seconds())
 
-# Paths whose responses belong to the signed-in user alone. Without this list the
-# generic "/api/ -> public, max-age=30" rule below would happily hand a shared
-# proxy a cacheable copy of private JSON — add every private prefix here at the
-# same time as the route that serves it.
+# Paths whose responses belong to the signed-in user alone: they get no-store
+# instead of any public window. Add every private prefix here at the same time
+# as the route that serves it — a private page that only matched the generic
+# page rule below would be handed to a shared proxy.
 PRIVATE_PATH_PREFIXES = ("/login", "/logout")
 
 # Status codes that get the HTML error page, and the line it shows. Anything
@@ -137,8 +136,6 @@ async def add_response_headers(request: Request, call_next):
     ):
         if path.startswith("/static/"):
             max_age = STATIC_CACHE_MAX_AGE
-        elif path.startswith("/api/"):
-            max_age = API_CACHE_MAX_AGE
         elif path in ("/", "/mytesla/"):
             max_age = PAGE_CACHE_MAX_AGE
         else:
@@ -258,7 +255,7 @@ def home(request: Request):
 
 
 # The two windows the dashboard's period switch offers, named as
-# /api/tesla/period-summary returns them.
+# get_period_summary() keys them.
 DASHBOARD_PERIODS = ("current_month", "trailing_90_days")
 
 
@@ -279,10 +276,10 @@ def tesla_dashboard(
 ):
     """Tesla cost dashboard, rendered server-side in one DB session.
 
-    Reuses tesla.get_dashboard() — the very payload /api/tesla/dashboard
-    returns — so the page and the JSON cannot drift apart. An unknown ?period
-    falls back to the current month rather than 404ing: it is a display toggle,
-    not a resource.
+    tesla.get_dashboard() resolves every widget from one session, so the whole
+    page costs nine queries and no HTTP round trip. An unknown ?period falls
+    back to the current month rather than 404ing: it is a display toggle, not a
+    resource.
     """
     if period not in DASHBOARD_PERIODS:
         period = DASHBOARD_PERIODS[0]

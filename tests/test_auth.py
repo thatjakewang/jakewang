@@ -187,7 +187,7 @@ class TestRouteGuard:
 
     def test_public_pages_stay_public(self, client):
         """This change must not have quietly put the existing site behind a login."""
-        for path in ("/", "/mytesla/", "/api/tesla/expenses/recent", "/health"):
+        for path in ("/", "/mytesla/", "/health"):
             assert client.get(path).status_code == 200, path
 
     def test_is_logged_in_reads_the_session(self, client):
@@ -200,13 +200,15 @@ class TestRouteGuard:
 
 
 class TestPrivateResponsesAreNotCacheable:
-    """The /api/ rule hands shared proxies a 30s public copy — private paths must opt out."""
+    """Public paths get a shared-cacheable window — private paths must opt out."""
 
     @pytest.mark.parametrize("path", ["/login", "/logout", "/login/anything"])
     def test_private_prefixes_are_recognized(self, path):
         assert is_private_path(path)
 
-    @pytest.mark.parametrize("path", ["/", "/mytesla/", "/api/tesla/stats", "/logout-ish"])
+    @pytest.mark.parametrize(
+        "path", ["/", "/mytesla/", "/api/tesla/charging-records", "/logout-ish"]
+    )
     def test_public_paths_are_not(self, path):
         assert not is_private_path(path)
 

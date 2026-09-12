@@ -11,7 +11,7 @@ from datetime import date
 
 import pytest
 
-from app.main import API_CACHE_MAX_AGE, app
+from app.main import app
 from tests.conftest import TEST_API_KEY, TEST_PASSWORD, FakeResult, FakeSession
 
 
@@ -91,24 +91,47 @@ class TestApiKeyIsIndependentOfLogin:
         assert response.status_code == 401
 
 
+def test_the_api_is_write_only():
+    """Every Tesla route is a POST from iPhone Shortcuts. The read endpoints
+    went when the dashboard stopped fetching itself — a GET reappearing here is
+    an endpoint nothing asked for, and it would need a cache rule of its own.
+
+    Asserted against the router rather than app.routes: test_auth mounts its
+    own /api/ route on the shared app to exercise the login guard.
+    """
+    from app.routers.tesla import router
+
+    assert {
+        (route.path, method)
+        for route in router.routes
+        for method in route.methods - {"HEAD", "OPTIONS"}
+    } == {
+        ("/charging-records", "POST"),
+        ("/car-expenses", "POST"),
+        ("/odometer", "POST"),
+    }
+
+
 class TestCacheHeaders:
-    def test_public_api_get_is_cacheable(self, client):
-        response = client.get("/api/tesla/expenses/recent")
-        assert response.status_code == 200
-        assert response.json() == []
-        assert (
-            response.headers["Cache-Control"]
-            == f"public, max-age={API_CACHE_MAX_AGE}"
+    def test_api_writes_are_never_cacheable(self, client_for):
+        """The API is write-only now, and a POST result is nobody else's to
+        reuse — no public window may appear on one."""
+        response = client_for(FakeSession(results=[FakeResult(rows=[{"id": 1}])])).post(
+            "/api/tesla/odometer",
+            headers={"x-api-key": TEST_API_KEY},
+            json={"reading_km": 24500},
         )
+        assert response.status_code == 200
+        assert "Cache-Control" not in response.headers
 
     def test_health_is_not_cacheable(self, client):
         response = client.get("/health")
         assert "Cache-Control" not in response.headers
 
     def test_keyed_request_is_not_publicly_cacheable(self, client):
-        response = client.get(
-            "/api/tesla/expenses/recent", headers={"x-api-key": TEST_API_KEY}
-        )
+        """A response fetched with a personal key is not shared-cacheable, even
+        when the path itself would otherwise get a public window."""
+        response = client.get("/", headers={"x-api-key": TEST_API_KEY})
         assert response.status_code == 200
         assert "Cache-Control" not in response.headers
 
@@ -132,32 +155,25 @@ class TestNoCORS:
             assert "access-control-allow-origin" not in response.headers, origin
 
     def test_preflight_is_not_answered(self, client):
-        response = client.options("/api/tesla/stats", headers={
+        response = client.options("/api/tesla/odometer", headers={
             "origin": "https://jakewang.dev",
-            "access-control-request-method": "GET",
+            "access-control-request-method": "POST",
         })
         assert "access-control-allow-origin" not in response.headers
 
 
 class TestGZip:
-    def test_large_responses_are_compressed(self, client_for):
-        rows = [
-            {"id": 1, "charge_date": date(2026, 1, 1), "provider": "Supercharger",
-             "amount": 100, "kwh": 20.5},
-        ] * 40  # well past the 500-byte minimum
-        client = client_for(FakeSession(rows=rows))
-        # FakeSession hands back every row regardless of the query's LIMIT 10,
-        # which is what makes this cheap endpoint big enough to compress.
-        response = client.get(
-            "/api/tesla/charging/recent", headers={"accept-encoding": "gzip"}
-        )
+    def test_large_responses_are_compressed(self, client):
+        """The dashboard page is the biggest thing the site serves now that the
+        API is write-only — several KB of rendered HTML, well past the 500-byte
+        minimum."""
+        response = client.get("/mytesla/", headers={"accept-encoding": "gzip"})
         assert response.headers.get("content-encoding") == "gzip"
-        assert len(response.json()) == 40  # httpx transparently decompresses
+        # httpx transparently decompresses, so the body is readable here
+        assert "Tesla Cost Tracker" in response.text
 
     def test_small_responses_stay_uncompressed(self, client):
-        response = client.get(
-            "/api/tesla/expenses/recent", headers={"accept-encoding": "gzip"}
-        )
+        response = client.get("/health", headers={"accept-encoding": "gzip"})
         assert "content-encoding" not in response.headers
 
 
@@ -176,7 +192,7 @@ class TestRateLimit:
         app.state.limiter.reset()
 
     def test_burst_beyond_limit_returns_429(self, client, spent_budget):
-        path = "/api/tesla/expenses/recent"  # cheap: FakeSession returns []
+        path = "/"  # cheap: the home page touches no database
         statuses = [client.get(path).status_code for _ in range(self.BURST)]
         assert 429 in statuses
         # Everything before the first 429 succeeded normally

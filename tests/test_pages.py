@@ -112,7 +112,7 @@ class TestNoIndex:
     """
 
     @pytest.mark.parametrize(
-        "path", PAGES + ["/api/tesla/expenses/recent", "/static/css/style.css"]
+        "path", PAGES + ["/health", "/static/css/style.css"]
     )
     def test_everything_is_noindex(self, client, path):
         tag = client.get(path).headers["X-Robots-Tag"]
@@ -180,7 +180,7 @@ class TestAssetPolicy:
 
 
 @pytest.mark.parametrize(
-    "path", PAGES + ["/api/tesla/expenses/recent", "/static/css/style.css"]
+    "path", PAGES + ["/health", "/static/css/style.css"]
 )
 def test_security_headers_on_everything(client, path):
     """Pages, API and static assets all go through the same middleware."""

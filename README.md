@@ -1,8 +1,9 @@
 # jakewang.dev
 
 Personal project site and its backend, served as one app from one origin: the
-pages at `/` and `/mytesla/`, the JSON they fetch at `/api/tesla/*`. Writes come
-from iPhone Shortcuts (protected by an API key).
+pages at `/` and `/mytesla/`, rendered server-side from the database. The only
+API is `/api/tesla/*`, and it is write-only — iPhone Shortcuts log records
+there with an API key.
 
 Not a traffic-facing site: there is no analytics, no sitemap/robots, and no SEO
 metadata.
@@ -67,16 +68,16 @@ app/
   limiter.py       # the shared rate limiter (routers need it, so not in main.py)
   templating.py    # the Jinja environment + its globals (same reason)
   utils.py         # row serialization, response envelope, date helpers
-  routers/         # thin HTTP route handlers (tesla, auth)
+  routers/         # auth pages, the Tesla writes, and the queries behind them
 templates/         # Jinja page shells (base + home + dashboard + login + errors)
 static/            # The JS/CSS the browser gets, plus favicons — no build step
 tests/             # pytest suite (no real DB)
 schema.sql         # reference DDL for rebuilding the database
 ```
 
-The dashboard is rendered server-side: `/mytesla/` calls the same
-`get_dashboard()` that `/api/tesla/dashboard` returns, resolves all nine queries
-in one session, and Jinja prints the numbers straight into the HTML. The page
+The dashboard is rendered server-side: `/mytesla/` calls `get_dashboard()`,
+which resolves all nine queries in one session, and Jinja prints the numbers
+straight into the HTML. The page
 ships no JavaScript of its own — the only script on the site is
 `static/js/nav.js` for the mobile menu. Nothing needs a redeploy when new
 records land, and nothing needs a second round trip either. It is KPI figures
@@ -202,6 +203,13 @@ psql "$DATABASE_URL" -c "SELECT conrelid::regclass AS tbl, conname
 
 ## Endpoints
 
+**The API is write-only.** It exists so iPhone Shortcuts can log records; the
+dashboard reads nothing over HTTP, because it is rendered server-side from the
+same queries. Those read endpoints existed while the page fetched its own data
+and were removed once nothing called them — the queries live on as plain
+functions in `app/routers/tesla.py`, called by `get_dashboard()`. A test pins
+that `/api/` stays POST-only.
+
 ### Public
 
 | Method | Path | Description |
@@ -210,18 +218,9 @@ psql "$DATABASE_URL" -c "SELECT conrelid::regclass AS tbl, conname
 | GET | `/login` | Sign-in page (303 to `?next=` if already signed in) |
 | POST | `/login` | Form login — `password`, optional `next`. Rate limited 5/min |
 | POST | `/logout` | Clear the session (POST only, so no link can sign you out) |
-| GET | `/api/tesla/dashboard` | Every payload below in one response — what the dashboard page fetches |
-| GET | `/api/tesla/stats` | Total cost, charging cost, cost per km |
-| GET | `/api/tesla/period-summary` | This month, comparable prior month, and trailing-90-day KPIs |
-| GET | `/api/tesla/data-coverage` | Collection start dates and latest recorded activity |
-| GET | `/api/tesla/expenses/recent` | Recent 10 car expenses (newest first) |
-| GET | `/api/tesla/charging/providers` | Charging cost grouped by provider |
-| GET | `/api/tesla/charging/recent` | Recent 10 charging records (newest first) |
-| GET | `/api/tesla/odometer/current` | Latest known odometer reading (km) |
-| GET | `/api/tesla/odometer/recent` | Recent 10 odometer readings (newest first) |
+| GET | `/robots.txt` | Allows search engines, blocks the AI crawlers |
 
-> Note: all tables carry an `id` (SERIAL) column. The `/recent` endpoints order by the
-> record's date column then `id DESC`, so rows logged on the same date come back newest-first.
+> Note: all tables carry an `id` (SERIAL) column, which is what the writes return.
 
 > Rate limiting: everything except `/health` is capped at 600 requests/minute per
 > client IP (in-memory, via slowapi). The cap covers pages and static assets too,
@@ -286,7 +285,7 @@ Response includes `id`:
 }
 ```
 
-`reading_date` is optional (defaults to today). Cost-per-km in `/api/tesla/stats`
+`reading_date` is optional (defaults to today). The dashboard's cost-per-km
 automatically follows the latest reading.
 
 ## Pages
@@ -304,14 +303,13 @@ automatically follows the latest reading.
 | Kind | max-age | Why |
 |------|---------|-----|
 | `/static/*` | 1 year | URLs carry a `?v=<mtime>` cache-buster, so this is safe |
-| `/api/*` | 30s | Shortcuts entries should reach the dashboard promptly |
-| pages | 60s | The dashboard's numbers now age with the page |
+| pages | 60s | The dashboard's numbers are rendered into them |
 | private paths | `no-store` | Belong to one signed-in user |
 
-Requests carrying `x-api-key` are never marked publicly cacheable, nor are
-responses that set a session cookie, nor anything matching
-`PRIVATE_PATH_PREFIXES` in `app/main.py` — without that last rule the generic
-`/api/*` entry above would hand a shared proxy a cacheable copy of private JSON.
+Only `GET`s that return 200 get a window at all, so the API's writes never do.
+Requests carrying `x-api-key` are never marked publicly cacheable either, nor
+are responses that set a session cookie, nor anything matching
+`PRIVATE_PATH_PREFIXES` in `app/main.py`.
 
 There is **no CORS layer**: pages and API share an origin, so nothing cross-origin
 happens. A test pins this, since adding CORS back would quietly re-open the API to

@@ -1,9 +1,8 @@
 {# Tesla cost dashboard (pages.tesla_dashboard), rendered server-side.
 
-   Every number below comes from get_dashboard() — the same function
-   /api/tesla/dashboard returns — resolved in one DB session before this
-   template runs, so the page and the JSON can never drift apart. The page
-   ships no JavaScript: what the browser receives is what it displays. #}
+   Every number below comes from get_dashboard(), resolved in one DB session
+   before this template runs. The page ships no JavaScript: what the browser
+   receives is what it displays. #}
 {% extends 'base.html' %}
 
 {# KPI card grid: cards is a list of (label, value, meta) triples. Local to

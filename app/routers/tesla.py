@@ -1,8 +1,13 @@
-"""Tesla router - cost tracking for a personal Tesla (charging + car expenses).
+"""Tesla cost tracking for a personal Tesla (charging + car expenses).
 
-Public read-only stats endpoints plus protected write endpoints (used by iPhone
-Shortcuts / automation). All monetary values are stored as integers and kWh as
-floats. The id column (SERIAL) provides stable ordering for /recent endpoints.
+Three protected write endpoints, used by iPhone Shortcuts, plus the read
+queries behind them. The reads are plain functions rather than routes: the
+only thing that wants them is the server-rendered dashboard, which calls
+get_dashboard() directly (see app/main.py). They were HTTP endpoints while the
+page fetched its own data — nothing did after that, so the routes went.
+
+All monetary values are stored as integers and kWh as floats. The id column
+(SERIAL) provides stable ordering for the recent-record queries.
 """
 
 from calendar import monthrange
@@ -56,9 +61,8 @@ def get_latest_odometer(db: Session) -> int:
     return int(reading) if reading is not None else settings.tesla_odometer_km
 
 
-@router.get("/stats")
-def get_stats(db: Session = Depends(get_db)):
-    """Return high-level Tesla cost statistics (public).
+def get_stats(db: Session):
+    """Return high-level Tesla cost statistics.
 
     Includes lifetime totals, average price per kWh, and cost per km based on
     the latest odometer reading. All queries are simple aggregates over the
@@ -100,8 +104,7 @@ def get_stats(db: Session = Depends(get_db)):
     }
 
 
-@router.get("/data-coverage")
-def get_data_coverage(db: Session = Depends(get_db)):
+def get_data_coverage(db: Session):
     """Return collection start dates and the most recent recorded activity."""
     row = db.execute(text("""
         SELECT
@@ -117,8 +120,7 @@ def get_data_coverage(db: Session = Depends(get_db)):
     return serialize_row(row)
 
 
-@router.get("/period-summary")
-def get_period_summary(db: Session = Depends(get_db)):
+def get_period_summary(db: Session):
     """Summarize this month, the previous month, and the trailing 90 days.
 
     Distance is measured between the last odometer reading before a period and
@@ -194,12 +196,11 @@ def get_period_summary(db: Session = Depends(get_db)):
     return result
 
 
-@router.get("/charging/providers")
-def get_charging_by_provider(db: Session = Depends(get_db)):
+def get_charging_by_provider(db: Session):
     """Return charging statistics grouped by provider (Supercharger, Home, etc.).
 
     Includes total kWh, total cost, and average price per kWh per provider.
-    Public endpoint. NULLIF protects against division by zero.
+    NULLIF protects against division by zero.
     """
     query = text("""
         SELECT
@@ -222,37 +223,29 @@ def get_charging_by_provider(db: Session = Depends(get_db)):
     return [serialize_row(row) for row in rows]
 
 
-@router.get("/charging/recent")
-def get_recent_charging_records(db: Session = Depends(get_db)):
-    """Return the 10 most recent charging records (newest first). Public."""
+def get_recent_charging_records(db: Session):
+    """Return the 10 most recent charging records (newest first)."""
     return fetch_recent(
         db, "charging_records", "id, charge_date, provider, amount, kwh",
         order_col="charge_date",
     )
 
 
-@router.get("/expenses/recent")
-def get_recent_car_expenses(db: Session = Depends(get_db)):
-    """Return the 10 most recent car expense records (newest first). Public."""
+def get_recent_car_expenses(db: Session):
+    """Return the 10 most recent car expense records (newest first)."""
     return fetch_recent(db, "car_expenses", "id, date, item, amount")
 
 
-@router.get("/dashboard")
-def get_dashboard(db: Session = Depends(get_db)):
-    """Return every payload the Tesla dashboard needs, in one response (public).
+def get_dashboard(db: Session):
+    """Return every number the dashboard shows, from one session: nine queries.
 
-    The Tesla frontend used to fire one request per widget on page load, each
-    opening its own DB session for a handful of small aggregates. This endpoint
-    is what the page actually fetches now: one request, one session, nine
-    queries.
+    The page used to fetch this over HTTP, one request per widget before that.
+    Now app/main.py calls it directly while rendering, so the whole dashboard
+    costs one session and no round trip. Every caller passes its own session —
+    there is no Depends here, because this is no longer a route.
 
-    The individual endpoints below each key are all still routed and tested;
-    they stay the stable public API for anything that wants one slice (iPhone
-    Shortcuts, ad-hoc curl). Handlers are called directly with the session
-    rather than through FastAPI, so Depends(get_db) never fires a second time.
-
-    Keys mirror the paths they replace, so tests that assert on a single
-    endpoint's shape cover the aggregate's contents too.
+    Keys are named after the queries that fill them; the template reads them
+    straight out of its context.
     """
     return {
         "stats": get_stats(db),
@@ -305,21 +298,6 @@ def create_car_expense(
         """,
         payload,
         "Car expense created",
-    )
-
-
-@router.get("/odometer/current")
-def get_current_odometer(db: Session = Depends(get_db)):
-    """Return the latest known total odometer in km (public, for the dashboard)."""
-    return {"odometer_km": get_latest_odometer(db)}
-
-
-@router.get("/odometer/recent")
-def get_recent_odometer_readings(db: Session = Depends(get_db)):
-    """Return the 10 most recent odometer readings (newest first). Public."""
-    return fetch_recent(
-        db, "odometer_readings", "id, reading_km, reading_date",
-        order_col="reading_date",
     )
 
 
