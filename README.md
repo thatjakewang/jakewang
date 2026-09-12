@@ -69,14 +69,13 @@ app/
   utils.py         # row serialization, response envelope, date helpers
   routers/         # thin HTTP route handlers (tesla, auth)
 templates/         # Jinja page shells (base + home + dashboard + login + errors)
-frontend/          # Readable JS/CSS sources
-static/            # Generated browser assets and favicons
+static/            # The JS/CSS the browser gets, plus favicons — no build step
 tests/             # pytest suite (no real DB)
 schema.sql         # reference DDL for rebuilding the database
 ```
 
 The dashboard is rendered client-side: `templates/tesla.html` only lays out empty
-containers, and the generated `static/js/tesla.min.js` fetches every number from
+containers, and `static/js/tesla.js` fetches every number from
 `/api/tesla/dashboard` on this same origin — one request carrying every widget's
 payload, served from a single DB session. Nothing needs a redeploy when new
 records land. It is KPI figures and tables only — there is no charting library,
@@ -133,15 +132,16 @@ tests never run against a different dependency set than production.
 
 ### Frontend assets
 
-The readable site JavaScript and CSS live in `frontend/`; esbuild generates the
-`.min.js` and `.min.css` files the templates serve. Generated files are
-committed, so production does not need Node.js. Rebuild after changing any
-frontend source:
+There is no build step and no Node.js anywhere: `static/` holds the actual
+JavaScript and CSS the browser receives, and editing a file there is the whole
+deployment. esbuild used to minify sources from a `frontend/` directory into
+committed `.min.*` files; that saved ~3KB gzipped per first visit and cost a
+rebuild-and-commit step on every change, so it was dropped along with Chart.js.
+A test asserts no `.min.*` URL comes back, in case a bundler is ever
+reintroduced without the toolchain to keep it honest.
 
-```bash
-npm ci
-npm run build
-```
+Assets are served with a one-year `Cache-Control` and a `?v=<mtime>`
+cache-buster, so an edit reaches browsers on the next page load.
 
 ## Tests
 

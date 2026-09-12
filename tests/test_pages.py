@@ -27,20 +27,22 @@ def test_dashboard_ships_no_charting_library(client):
     """The dashboard is numbers and tables only. Chart.js was removed with every
     canvas it drew; pulling a charting bundle back in is the regression here."""
     html = client.get("/mytesla/").text
-    assert "dashboard.min.js" in html
-    assert "tesla.min.js" in html
+    assert "dashboard.js" in html
+    assert "tesla.js" in html
     for needle in ("chart.custom.min.js", "chart.umd.min.js",
                    "chartjs-plugin-datalabels.min.js", "<canvas"):
         assert needle not in html, f"{needle} came back on /mytesla/"
     assert client.get("/static/js/vendor/chart.custom.min.js").status_code == 404
 
 
-def test_pages_serve_minified_site_assets(client):
+def test_pages_serve_the_source_assets_directly(client):
+    """There is no build step: the files in static/ are the files that ship.
+    A .min.* URL here means a bundler crept back in without the toolchain."""
     html = client.get("/").text
-    assert "style.min.css" in html
-    assert "nav.min.js" in html
-    assert "static/css/style.css" not in html
-    assert "static/js/nav.js" not in html
+    assert "css/style.css" in html
+    assert "js/nav.js" in html
+    assert ".min.css" not in html
+    assert ".min.js" not in html
 
 
 def test_pages_use_svg_favicon_and_keep_apple_touch_icon(client):
@@ -63,7 +65,7 @@ def test_dashboard_includes_period_and_coverage_controls(client):
 
 def test_dashboard_calls_the_api_on_this_origin(client):
     """The merged service serves both halves, so the JS must stay relative."""
-    js = Path("frontend/js/tesla.js").read_text()
+    js = Path("static/js/tesla.js").read_text()
     assert 'const API_BASE = "";' in js
     assert "api.jakewang.dev" not in js
     assert "data-api-base" not in client.get("/mytesla/").text
@@ -73,7 +75,7 @@ def test_dashboard_loads_from_the_single_aggregate_endpoint(client):
     """Page load must stay one request. Fetching a per-widget endpoint here
     instead is the regression this guards: it silently costs another round
     trip and another DB session per widget added back."""
-    js = Path("frontend/js/tesla.js").read_text()
+    js = Path("static/js/tesla.js").read_text()
     fetched = re.findall(r"loadJSON\(`\$\{API_BASE\}(/api/[^`]+)`", js)
     assert fetched == ["/api/tesla/dashboard"]
     assert "loadChart(" not in js
@@ -107,7 +109,7 @@ class TestNoIndex:
     """
 
     @pytest.mark.parametrize(
-        "path", PAGES + ["/api/tesla/expenses/recent", "/static/css/style.min.css"]
+        "path", PAGES + ["/api/tesla/expenses/recent", "/static/css/style.css"]
     )
     def test_everything_is_noindex(self, client, path):
         tag = client.get(path).headers["X-Robots-Tag"]
@@ -154,14 +156,14 @@ class TestAssetPolicy:
         assert response.headers["Cache-Control"] == f"public, max-age={PAGE_CACHE_MAX_AGE}"
 
     def test_static_files_get_long_max_age(self, client):
-        response = client.get("/static/css/style.min.css")
+        response = client.get("/static/css/style.css")
         assert response.status_code == 200
         assert f"max-age={STATIC_CACHE_MAX_AGE}" in response.headers["Cache-Control"]
 
     def test_pages_version_static_asset_urls(self, client):
         # The ?v= cache-buster is what makes the long max-age safe to serve.
         html = client.get("/").text
-        assert re.search(r"/static/css/style\.min\.css\?v=\d+", html)
+        assert re.search(r"/static/css/style\.css\?v=\d+", html)
 
     def test_missing_asset_versions_to_zero(self):
         from app.main import static_url
@@ -170,7 +172,7 @@ class TestAssetPolicy:
 
 
 @pytest.mark.parametrize(
-    "path", PAGES + ["/api/tesla/expenses/recent", "/static/css/style.min.css"]
+    "path", PAGES + ["/api/tesla/expenses/recent", "/static/css/style.css"]
 )
 def test_security_headers_on_everything(client, path):
     """Pages, API and static assets all go through the same middleware."""

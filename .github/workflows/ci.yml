@@ -10,17 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Verify generated frontend assets
-        run: |
-          npm ci
-          npm run build
-          git diff --exit-code -- static/css/style.min.css static/js/nav.min.js static/js/dashboard.min.js static/js/tesla.min.js
-
       - uses: actions/setup-python@v5
         with:
           python-version-file: .python-version

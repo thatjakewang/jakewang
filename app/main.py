@@ -252,7 +252,7 @@ def home(request: Request):
 
 @app.get("/mytesla/")
 def tesla_dashboard(request: Request):
-    """Tesla cost dashboard; static/js/tesla.min.js fills in every number."""
+    """Tesla cost dashboard; static/js/tesla.js fills in every number."""
     return templates.TemplateResponse(
         request=request,
         name="tesla.html",

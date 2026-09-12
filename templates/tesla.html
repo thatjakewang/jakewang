@@ -1,6 +1,6 @@
 {# Tesla cost dashboard (pages.tesla_dashboard). The template only lays out
-   sections and empty containers; the generated tesla.min.js fetches all
-   data client-side from the API and fills them in with dashboard.min.js, so the
+   sections and empty containers; static/js/tesla.js fetches all
+   data client-side from the API and fills them in with dashboard.js, so the
    page stays up without a redeploy when new
    records land in the API. #}
 {% extends 'base.html' %}
@@ -81,6 +81,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{{ static_url('js/dashboard.min.js') }}" defer></script>
-<script src="{{ static_url('js/tesla.min.js') }}" defer></script>
+<script src="{{ static_url('js/dashboard.js') }}" defer></script>
+<script src="{{ static_url('js/tesla.js') }}" defer></script>
 {% endblock %}
