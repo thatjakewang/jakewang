@@ -130,6 +130,56 @@ python -m pytest tests/
 Tests never touch a real database — DB sessions are faked.
 GitHub Actions (`.github/workflows/ci.yml`) runs the suite on every push and pull request.
 
+## Deployment
+
+The site lives at `/var/www/main-site`, served by uvicorn behind nginx and
+managed by systemd. uvicorn needs `--proxy-headers` (and
+`--forwarded-allow-ips`), or the rate limiter counts every request as coming
+from the proxy's IP.
+
+```bash
+cd /var/www/main-site
+git pull
+source .venv/bin/activate
+pip install -r requirements.lock   # only when the lock changed
+sudo systemctl restart main-site
+```
+
+Then verify, in this order:
+
+```bash
+systemctl status main-site --no-pager
+curl -fsS https://jakewang.dev/health    # {"status":"ok","database":"ok"}
+```
+
+...and open `/mytesla/` in a browser. The dashboard is rendered server-side, so
+a missing number means a query that failed while rendering — there is no
+client-side fetch to inspect in the console, and the page is either right or
+visibly wrong. Finish by logging one record from Shortcuts, which is the only
+thing that writes.
+
+To roll back, check out the previous commit and restart; every commit is
+deployable on its own.
+
+What this deployment does **not** need:
+
+- **A build step.** `static/` is served exactly as committed — no Node, no npm,
+  no bundler. Editing a file under `static/` is the whole frontend deployment.
+- **More than two secrets.** `.env` needs `DATABASE_URL` and
+  `SHORTCUT_API_KEY`. It is read once at startup, so editing it means a restart.
+
+One thing to watch: **`pip install` never removes anything.** When a dependency
+leaves `requirements.lock`, the old package stays in the venv, and the
+environment quietly drifts from the file that is supposed to describe it:
+
+```bash
+uv pip sync requirements.lock      # or: pip uninstall <package>
+```
+
+`itsdangerous` and `python-multipart` left with the browser login and are the
+most recent case — harmless if they linger, but the venv no longer matches the
+lock until they go.
+
 ## Database Schema & Migrations
 
 `schema.sql` is the reference DDL for every table the API uses. Rebuild an empty
@@ -142,7 +192,8 @@ psql "$DATABASE_URL" -f schema.sql
 Schema changes are delivered as migration scripts in `migrations/`.
 The workflow:
 
-1. Deploy code that works with both the old and the new schema.
+1. Deploy code that works with both the old and the new schema (see
+   [Deployment](#deployment)).
 2. Run the script on the production server. `DATABASE_URL` lives in `.env`,
    which the app reads at startup but never exports into the shell — activating
    the venv does *not* set it. Pull it out with the same parser the app uses;
