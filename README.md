@@ -208,12 +208,8 @@ psql "$DATABASE_URL" -c "SELECT conrelid::regclass AS tbl, conname
 | GET | `/api/tesla/stats` | Total cost, charging cost, cost per km |
 | GET | `/api/tesla/period-summary` | This month, comparable prior month, and trailing-90-day KPIs |
 | GET | `/api/tesla/data-coverage` | Collection start dates and latest recorded activity |
-| GET | `/api/tesla/monthly-summary` | Month-by-month cost & efficiency (km driven, cost/km, kWh/100km) |
-| GET | `/api/tesla/expenses` | Car expenses grouped by item |
 | GET | `/api/tesla/expenses/recent` | Recent 10 car expenses (newest first) |
 | GET | `/api/tesla/charging/providers` | Charging cost grouped by provider |
-| GET | `/api/tesla/charging/monthly-trend` | Monthly charging trend |
-| GET | `/api/tesla/charging/sessions` | Full charging history (per-session cost distribution) |
 | GET | `/api/tesla/charging/recent` | Recent 10 charging records (newest first) |
 | GET | `/api/tesla/odometer/current` | Latest known odometer reading (km) |
 | GET | `/api/tesla/odometer/recent` | Recent 10 odometer readings (newest first) |
@@ -223,7 +219,7 @@ psql "$DATABASE_URL" -c "SELECT conrelid::regclass AS tbl, conname
 
 > Rate limiting: everything except `/health` is capped at 600 requests/minute per
 > client IP (in-memory, via slowapi). The cap covers pages and static assets too,
-> and one page load pulls ~15 requests. Behind a reverse proxy, run uvicorn with
+> and one page load pulls fewer than 10 requests. Behind a reverse proxy, run uvicorn with
 > `--proxy-headers` (and `--forwarded-allow-ips`) so the real client IP is used.
 
 ### Protected (Header: `x-api-key`)

@@ -7,9 +7,9 @@ the routers — importing back the other way would be circular.
 Per-client-IP cap on every endpoint (in-memory storage — fine for a
 single-process deployment). /health and /robots.txt are exempted at their
 definitions so monitors and crawlers are never throttled. The cap covers static
-assets too, and one page load pulls ~15 requests (CSS, JS, favicons, then the
-dashboard's API calls), so it is set well above a browser's burst rather than
-at the old API-only value.
+assets too, and one page load pulls fewer than 10 requests (CSS, JS, favicons,
+then the dashboard's single API call), so it is set well above a browser's
+burst rather than at the old API-only value.
 
 Note: behind a reverse proxy, uvicorn needs --proxy-headers (and
 --forwarded-allow-ips) so get_remote_address sees the real client IP.

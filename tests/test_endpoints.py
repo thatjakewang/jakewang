@@ -142,12 +142,14 @@ class TestNoCORS:
 class TestGZip:
     def test_large_responses_are_compressed(self, client_for):
         rows = [
-            {"charge_date": date(2026, 1, 1), "provider": "Supercharger",
+            {"id": 1, "charge_date": date(2026, 1, 1), "provider": "Supercharger",
              "amount": 100, "kwh": 20.5},
         ] * 40  # well past the 500-byte minimum
         client = client_for(FakeSession(rows=rows))
+        # FakeSession hands back every row regardless of the query's LIMIT 10,
+        # which is what makes this cheap endpoint big enough to compress.
         response = client.get(
-            "/api/tesla/charging/sessions", headers={"accept-encoding": "gzip"}
+            "/api/tesla/charging/recent", headers={"accept-encoding": "gzip"}
         )
         assert response.headers.get("content-encoding") == "gzip"
         assert len(response.json()) == 40  # httpx transparently decompresses

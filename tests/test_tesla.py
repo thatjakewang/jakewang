@@ -1,4 +1,4 @@
-"""Tests for the Tesla router: /stats math, /monthly-summary aggregation, writes.
+"""Tests for the Tesla router: /stats math, /period-summary windows, writes.
 
 The interesting logic is pure-Python post-processing (odometer deltas, derived
 per-km metrics); FakeSession supplies the query results in call order.
@@ -45,68 +45,6 @@ class TestStats:
         assert body["odometer_km"] == 21000
         assert body["avg_price_per_kwh"] == 0  # zero kWh must not divide
         assert body["cost_per_km"] == 0
-
-
-class TestMonthlySummary:
-    def test_km_attribution_and_derived_metrics(self, client_for):
-        session = FakeSession(results=[
-            # charging per month (shared shape with /charging/monthly-trend)
-            FakeResult(rows=[
-                {"month": "2026-01", "total_amount": 500, "total_kwh": 100.0},
-                {"month": "2026-03", "total_amount": 600, "total_kwh": 150.0},
-            ]),
-            # car expenses per month
-            FakeResult(rows=[{"month": "2026-02", "amount": 2000}]),
-            # last odometer reading per reading-month
-            FakeResult(rows=[
-                {"month": "2026-01", "reading_km": 10000},
-                {"month": "2026-03", "reading_km": 12000},
-                {"month": "2026-04", "reading_km": 13000},
-            ]),
-        ])
-        body = client_for(session).get("/api/tesla/monthly-summary").json()
-
-        assert body == [
-            # first reading month: no previous reading, so no km attributed
-            {"month": "2026-01", "km_driven": None, "total_cost": 500,
-             "charging_cost": 500, "non_charging_cost": 0,
-             "cost_per_km": None, "energy_cost_per_km": None,
-             "kwh": 100.0, "kwh_per_100km": None},
-            # expense-only month
-            {"month": "2026-02", "km_driven": None, "total_cost": 2000,
-             "charging_cost": 0, "non_charging_cost": 2000,
-             "cost_per_km": None, "energy_cost_per_km": None,
-             "kwh": 0.0, "kwh_per_100km": None},
-            # the Jan->Mar reading gap is attributed to March (the later month)
-            {"month": "2026-03", "km_driven": 2000, "total_cost": 600,
-             "charging_cost": 600, "non_charging_cost": 0,
-             "cost_per_km": 0.3, "energy_cost_per_km": 0.3,
-             "kwh": 150.0, "kwh_per_100km": 7.5},
-            # reading-only month still appears, with zero costs
-            {"month": "2026-04", "km_driven": 1000, "total_cost": 0,
-             "charging_cost": 0, "non_charging_cost": 0,
-             "cost_per_km": 0.0, "energy_cost_per_km": 0.0,
-             "kwh": 0.0, "kwh_per_100km": 0.0},
-        ]
-
-    def test_no_data_returns_empty_list(self, client_for):
-        session = FakeSession(results=[
-            FakeResult(rows=[]), FakeResult(rows=[]), FakeResult(rows=[]),
-        ])
-        assert client_for(session).get("/api/tesla/monthly-summary").json() == []
-
-    def test_monthly_odometer_query_uses_latest_row_not_highest_reading(self, client_for):
-        """A lower correction entered later in a month must replace a bad high reading."""
-        session = FakeSession(results=[
-            FakeResult(rows=[]), FakeResult(rows=[]), FakeResult(rows=[]),
-        ])
-
-        client_for(session).get("/api/tesla/monthly-summary")
-
-        odometer_sql = str(session.calls[2][0])
-        assert "DISTINCT ON" in odometer_sql
-        assert "reading_date DESC, id DESC" in odometer_sql
-        assert "MAX(reading_km)" not in odometer_sql
 
 
 class TestWrites:
@@ -170,10 +108,7 @@ class TestReadEndpoints:
     serialization of real DB types (Decimal, date) through each query shape."""
 
     @pytest.mark.parametrize("path", [
-        "/api/tesla/expenses",
         "/api/tesla/charging/providers",
-        "/api/tesla/charging/monthly-trend",
-        "/api/tesla/charging/sessions",
         "/api/tesla/charging/recent",
         "/api/tesla/expenses/recent",
         "/api/tesla/odometer/recent",
@@ -221,15 +156,6 @@ class TestReadEndpoints:
             "last_updated": "2026-08-28",
         }
 
-    def test_sessions_serialize_dates(self, client_for):
-        session = FakeSession(rows=[
-            {"charge_date": date(2026, 7, 1), "provider": "Home", "amount": 90, "kwh": 22.0},
-        ])
-        body = client_for(session).get("/api/tesla/charging/sessions").json()
-        assert body == [
-            {"charge_date": "2026-07-01", "provider": "Home", "amount": 90, "kwh": 22.0},
-        ]
-
     def test_odometer_current_returns_latest_reading(self, client_for):
         body = client_for(FakeSession(scalar_value=24123)).get(
             "/api/tesla/odometer/current"
@@ -268,19 +194,14 @@ class TestPeriodSummary:
 
 
 class TestDashboardAggregate:
-    """The /dashboard endpoint the page actually fetches, which folds the ten
+    """The /dashboard endpoint the page actually fetches, which folds the six
     per-widget endpoints into one response served from a single DB session."""
 
-    # Query order inside get_dashboard, one FakeResult each. The shared
-    # charging-by-month aggregate runs first, then each handler in key order.
+    # Query order inside get_dashboard, one FakeResult each: the handlers run
+    # in key order.
     @staticmethod
     def _session():
         return FakeSession(results=[
-            # shared charging-by-month aggregate (trend + monthly summary)
-            FakeResult(rows=[
-                {"month": "2026-01", "total_kwh": 100.0, "total_amount": 500,
-                 "avg_price_per_kwh": 5.0},
-            ]),
             # stats: lifetime totals, then the latest odometer reading
             FakeResult(rows=[{"car_expense_total": 2000, "charging_cost": 500,
                               "energy_kwh": 100.0}]),
@@ -294,20 +215,11 @@ class TestDashboardAggregate:
             *[FakeResult(rows=[{"charging_cost": 200, "energy_kwh": 40,
                                 "non_charging_cost": 100, "starting_odometer": 1000,
                                 "ending_odometer": 1100}]) for _ in range(3)],
-            # expenses by item
-            FakeResult(rows=[{"item": "Insurance", "total_amount": 2000}]),
             # charging by provider
             FakeResult(rows=[{"provider": "Tesla", "total_kwh": 100.0,
                               "total_amount": 500, "avg_price_per_kwh": 5.0,
                               "paid_kwh": 100.0, "paid_avg_price_per_kwh": 5.0,
                               "free_kwh": 0.0, "free_sessions": 0}]),
-            # every charging session
-            FakeResult(rows=[{"charge_date": date(2026, 1, 5), "provider": "Tesla",
-                              "amount": 500, "kwh": 100.0}]),
-            # monthly summary: car expenses per month, then odometer per month
-            FakeResult(rows=[{"month": "2026-01", "amount": 2000}]),
-            FakeResult(rows=[{"month": "2026-01", "reading_km": 9000},
-                             {"month": "2026-02", "reading_km": 10000}]),
             # recent charging, then recent car expenses
             FakeResult(rows=[{"id": 1, "charge_date": date(2026, 1, 5),
                               "provider": "Tesla", "amount": 500, "kwh": 100.0}]),
@@ -319,51 +231,27 @@ class TestDashboardAggregate:
         body = client_for(self._session()).get("/api/tesla/dashboard").json()
 
         assert list(body) == [
-            "stats", "data_coverage", "period_summary", "expenses",
-            "charging_providers", "charging_sessions", "charging_monthly_trend",
-            "monthly_summary", "recent_charging", "recent_expenses",
+            "stats", "data_coverage", "period_summary",
+            "charging_providers", "recent_charging", "recent_expenses",
         ]
         # Each slice keeps the exact shape its own endpoint returns.
         assert body["stats"]["total_cost"] == 2500
         assert body["stats"]["odometer_km"] == 10000
         assert body["data_coverage"]["last_updated"] == "2026-03-09"
         assert body["period_summary"]["current_month"]["total_cost_per_km"] == 3.0
-        assert body["expenses"] == [{"item": "Insurance", "total_amount": 2000}]
         assert body["charging_providers"][0]["provider"] == "Tesla"
-        assert body["charging_sessions"][0]["charge_date"] == "2026-01-05"
-        assert body["charging_monthly_trend"] == [
-            {"month": "2026-01", "total_kwh": 100.0, "total_amount": 500,
-             "avg_price_per_kwh": 5.0},
-        ]
-        assert body["monthly_summary"][0]["month"] == "2026-01"
-        assert body["monthly_summary"][0]["total_cost"] == 2500
         assert body["recent_charging"][0]["id"] == 1
         assert body["recent_expenses"][0]["item"] == "Insurance"
 
-    def test_charging_records_are_bucketed_by_month_only_once(self, client_for):
-        """The trend and the monthly summary share one GROUP BY charge_date query."""
+    def test_page_load_costs_one_session_and_nine_queries(self, client_for):
+        """Every widget the page still draws, in one round of queries. The
+        month-bucketing aggregates went out with the charts — a DATE_TRUNC over
+        charge_date coming back here means a dropped chart came back with it."""
         session = self._session()
         client_for(session).get("/api/tesla/dashboard")
 
-        monthly_charging_queries = [
+        assert len(session.calls) == 9
+        assert not [
             call for call in session.calls
             if "DATE_TRUNC('month', charge_date)" in str(call[0])
         ]
-        assert len(monthly_charging_queries) == 1
-        # One session, one round of queries: fewer than the ten endpoints cost
-        # separately (15), because that duplicate aggregate is now shared.
-        assert len(session.calls) == 14
-
-    def test_monthly_trend_slice_matches_the_standalone_endpoint(self, client_for):
-        """/dashboard must not drift from the endpoint it mirrors."""
-        rows = [{"month": "2026-01", "total_kwh": Decimal("100.005"),
-                 "total_amount": Decimal("500"), "avg_price_per_kwh": Decimal("4.9999")}]
-        standalone = client_for(FakeSession(rows=rows)).get(
-            "/api/tesla/charging/monthly-trend"
-        ).json()
-
-        session = self._session()
-        session.results[0] = FakeResult(rows=rows)
-        aggregated = client_for(session).get("/api/tesla/dashboard").json()
-
-        assert aggregated["charging_monthly_trend"] == standalone

@@ -194,20 +194,6 @@ def get_period_summary(db: Session = Depends(get_db)):
     return result
 
 
-@router.get("/expenses")
-def get_expenses(db: Session = Depends(get_db)):
-    """Return car expenses grouped by item (e.g. Insurance, Tires), sorted by total desc. Public."""
-    query = text("""
-        SELECT item, COALESCE(SUM(amount), 0) AS total_amount
-        FROM car_expenses
-        GROUP BY item
-        ORDER BY total_amount DESC
-    """)
-    rows = db.execute(query).mappings().all()
-
-    return [serialize_row(row) for row in rows]
-
-
 @router.get("/charging/providers")
 def get_charging_by_provider(db: Session = Depends(get_db)):
     """Return charging statistics grouped by provider (Supercharger, Home, etc.).
@@ -236,132 +222,6 @@ def get_charging_by_provider(db: Session = Depends(get_db)):
     return [serialize_row(row) for row in rows]
 
 
-def charging_by_month(db: Session):
-    """Return raw month-bucketed totals over charging_records, oldest month first.
-
-    Shared by /charging/monthly-trend and /monthly-summary, which used to run
-    near-identical GROUP BY queries; /dashboard fetches these rows once and
-    hands them to both. Rows are unserialized on purpose, so each caller keeps
-    its own rounding (the trend serializes; the summary divides first).
-    """
-    return db.execute(text("""
-        SELECT
-            TO_CHAR(DATE_TRUNC('month', charge_date), 'YYYY-MM') AS month,
-            COALESCE(SUM(kwh), 0) AS total_kwh,
-            COALESCE(SUM(amount), 0) AS total_amount,
-            COALESCE(SUM(amount) / NULLIF(SUM(kwh), 0), 0) AS avg_price_per_kwh
-        FROM charging_records
-        GROUP BY DATE_TRUNC('month', charge_date)
-        ORDER BY DATE_TRUNC('month', charge_date)
-    """)).mappings().all()
-
-
-@router.get("/charging/monthly-trend")
-def get_monthly_charging_trend(db: Session = Depends(get_db)):
-    """Return month-by-month charging totals and average price per kWh.
-
-    Uses Postgres DATE_TRUNC for monthly bucketing. Ordered chronologically. Public.
-    """
-    # serialize_row already rounds floats/Decimals to 2 decimals for JSON
-    return [serialize_row(row) for row in charging_by_month(db)]
-
-
-@router.get("/monthly-summary")
-def get_monthly_summary(db: Session = Depends(get_db)):
-    """Return month-by-month cost & efficiency summary (public).
-
-    Combines all three tables per calendar month:
-    - charging_records : charging cost + energy charged
-    - car_expenses     : all other car spending
-    - odometer_readings: km driven = this month's last reading minus the
-      previous reading-month's last reading (gaps between reading months are
-      attributed to the later month)
-
-    Derived fields (cost_per_km, kwh_per_100km) are null when a month has no
-    odometer delta to divide by; months with no activity at all are absent.
-    No page renders this any more — the dashboard's monthly charts were removed
-    with Chart.js. Kept as a slice for anything that wants the history.
-    """
-    return build_monthly_summary(db, charging_by_month(db))
-
-
-def build_monthly_summary(db: Session, charging_rows) -> list[dict]:
-    """Body of /monthly-summary, with the charging aggregate passed in.
-
-    Split out so /dashboard can reuse rows already fetched for the monthly
-    trend instead of querying charging_records a second time.
-    """
-    expense_rows = db.execute(text("""
-        SELECT
-            TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS month,
-            SUM(amount) AS amount
-        FROM car_expenses
-        GROUP BY DATE_TRUNC('month', date)
-    """)).mappings().all()
-
-    odometer_rows = db.execute(text("""
-        SELECT DISTINCT ON (DATE_TRUNC('month', reading_date))
-            TO_CHAR(DATE_TRUNC('month', reading_date), 'YYYY-MM') AS month,
-            reading_km
-        FROM odometer_readings
-        ORDER BY DATE_TRUNC('month', reading_date), reading_date DESC, id DESC
-    """)).mappings().all()
-
-    # km driven per month: delta between consecutive reading months
-    km_by_month: dict[str, int] = {}
-    prev_reading = None
-    for row in odometer_rows:
-        reading = int(row["reading_km"])
-        if prev_reading is not None:
-            km_by_month[row["month"]] = reading - prev_reading
-        prev_reading = reading
-
-    charging_months = {row["month"]: row for row in charging_rows}
-    expenses_by_month = {row["month"]: int(row["amount"] or 0) for row in expense_rows}
-
-    months = sorted(set(charging_months) | set(expenses_by_month) | set(km_by_month))
-
-    result = []
-    for month in months:
-        charging = charging_months.get(month)
-        charging_amount = int(charging["total_amount"] or 0) if charging else 0
-        kwh = float(charging["total_kwh"] or 0) if charging else 0.0
-        total_cost = charging_amount + expenses_by_month.get(month, 0)
-        km = km_by_month.get(month)
-
-        result.append({
-            "month": month,
-            "km_driven": km,
-            "total_cost": total_cost,
-            "charging_cost": charging_amount,
-            "non_charging_cost": expenses_by_month.get(month, 0),
-            "cost_per_km": round(total_cost / km, 2) if km else None,
-            "energy_cost_per_km": round(charging_amount / km, 2) if km else None,
-            "kwh": round(kwh, 1),
-            "kwh_per_100km": round(kwh / km * 100, 1) if km else None,
-        })
-
-    return result
-
-
-@router.get("/charging/sessions")
-def get_charging_sessions(db: Session = Depends(get_db)):
-    """Return every charging session (date, provider, amount, kWh). Public.
-
-    Unlike /charging/recent (capped at 10), this returns the full history so the
-    frontend can plot the per-session cost distribution (kWh vs. amount scatter).
-    Personal use keeps this table small, so returning every row is fine.
-    """
-    query = text("""
-        SELECT charge_date, provider, amount, kwh
-        FROM charging_records
-        ORDER BY charge_date
-    """)
-    rows = db.execute(query).mappings().all()
-
-    return [serialize_row(row) for row in rows]
-
-
 @router.get("/charging/recent")
 def get_recent_charging_records(db: Session = Depends(get_db)):
     """Return the 10 most recent charging records (newest first). Public."""
@@ -381,11 +241,10 @@ def get_recent_car_expenses(db: Session = Depends(get_db)):
 def get_dashboard(db: Session = Depends(get_db)):
     """Return every payload the Tesla dashboard needs, in one response (public).
 
-    The Tesla frontend used to fire ten parallel requests on page load, each
+    The Tesla frontend used to fire one request per widget on page load, each
     opening its own DB session for a handful of small aggregates. This endpoint
-    is what the page actually fetches now: one request, one session, and the
-    charging-by-month aggregate is shared between the trend and the summary
-    instead of being run twice (15 queries -> 14).
+    is what the page actually fetches now: one request, one session, nine
+    queries.
 
     The individual endpoints below each key are all still routed and tested;
     they stay the stable public API for anything that wants one slice (iPhone
@@ -395,16 +254,11 @@ def get_dashboard(db: Session = Depends(get_db)):
     Keys mirror the paths they replace, so tests that assert on a single
     endpoint's shape cover the aggregate's contents too.
     """
-    monthly_charging = charging_by_month(db)
     return {
         "stats": get_stats(db),
         "data_coverage": get_data_coverage(db),
         "period_summary": get_period_summary(db),
-        "expenses": get_expenses(db),
         "charging_providers": get_charging_by_provider(db),
-        "charging_sessions": get_charging_sessions(db),
-        "charging_monthly_trend": [serialize_row(row) for row in monthly_charging],
-        "monthly_summary": build_monthly_summary(db, monthly_charging),
         "recent_charging": get_recent_charging_records(db),
         "recent_expenses": get_recent_car_expenses(db),
     }

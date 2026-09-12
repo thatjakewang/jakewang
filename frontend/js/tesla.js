@@ -3,9 +3,9 @@
    is served from this same origin, so every URL below is root-relative.
 
    The whole page comes from ONE request: /api/tesla/dashboard returns what the
-   ten per-widget endpoints (/stats, /expenses, /charging/providers, …) return,
-   under keys named after them, so page load costs one HTTP round trip, one DB
-   session, and one cacheable response instead of ten of each. Each widget is
+   six per-widget endpoints (/stats, /data-coverage, /charging/providers, …)
+   return, under keys named after them, so page load costs one HTTP round trip,
+   one DB session, and one cacheable response instead of six of each. Each widget is
    still drawn by its own function, wrapped in renderWidget so one bad payload
    can't blank the rest of the page. Those endpoints all still exist for
    anything that wants a single slice. */
