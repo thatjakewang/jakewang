@@ -1,52 +1,74 @@
-{# Tesla cost dashboard (pages.tesla_dashboard). The template only lays out
-   sections and empty containers; static/js/tesla.js fetches all
-   data client-side from the API and fills them in with dashboard.js, so the
-   page stays up without a redeploy when new
-   records land in the API. #}
+{# Tesla cost dashboard (pages.tesla_dashboard), rendered server-side.
+
+   Every number below comes from get_dashboard() — the same function
+   /api/tesla/dashboard returns — resolved in one DB session before this
+   template runs, so the page and the JSON can never drift apart. The page
+   ships no JavaScript: what the browser receives is what it displays. #}
 {% extends 'base.html' %}
-{% from '_kpi.html' import kpi_grid %}
+
+{# KPI card grid: cards is a list of (label, value, meta) triples. Local to
+   this template — the dashboard is the only page that has ever used it. #}
+{% macro kpi_grid(cards, grid_class='') %}
+<div class="kpi-grid{% if grid_class %} {{ grid_class }}{% endif %}">
+    {% for label, value, meta in cards %}
+    <div class="kpi-card">
+        <div class="kpi-card-label">{{ label }}</div>
+        <div class="kpi-card-value">{{ value }}</div>
+        <div class="kpi-card-meta">{{ meta }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endmacro %}
 
 {% block content %}
 <section class="intro">
     <h1>Tesla Cost Tracker</h1>
     <p class="subtitle">2024 Model 3 Highland · Standard Range · live ownership costs</p>
-    <p class="dashboard-meta data-updated" id="data-updated">Checking latest data...</p>
+    <p class="dashboard-meta data-updated">Data last updated {{ data_coverage.last_updated or "No records" }}</p>
 </section>
 
 <section class="dashboard-section">
     <h2 class="dashboard-section-title">Current Stats</h2>
 
     {{ kpi_grid([
-        ("total-cost", "Total Cost", "all-time"),
-        ("odometer-km", "Odometer", "km driven"),
-        ("cost-per-km", "Total Cost / km", "all recorded costs"),
-        ("charging-cost-per-km", "Energy Cost / km", "charging only"),
-        ("non-charging-cost-per-km", "Other Cost / km", "insurance, tolls, etc."),
-        ("charging-cost", "Charging Cost", "all-time"),
-        ("non-charging-cost", "Other Costs", "all-time"),
-        ("avg-price", "Avg Price", "effective NTD / kWh"),
+        ("Total Cost", stats.total_cost | money, "all-time"),
+        ("Odometer", stats.odometer_km | number(suffix=" km"), "km driven"),
+        ("Total Cost / km", stats.cost_per_km | money, "all recorded costs"),
+        ("Energy Cost / km", stats.charging_cost_per_km | money, "charging only"),
+        ("Other Cost / km", stats.non_charging_cost_per_km | money, "insurance, tolls, etc."),
+        ("Charging Cost", stats.charging_cost | money, "all-time"),
+        ("Other Costs", stats.non_charging_cost | money, "all-time"),
+        ("Avg Price", stats.avg_price_per_kwh | money, "effective NTD / kWh"),
     ], "cols-3") }}
     <p class="dashboard-note">All-time per-km figures use the current odometer as the denominator.</p>
 </section>
 
+{% set period = period_summary[period_key] %}
+{% set change = period.cost_per_km_change_pct if period_key == 'current_month' else none %}
 <section class="dashboard-section">
     <div class="dashboard-heading-row">
         <div>
             <h2 class="dashboard-section-title">Period Performance</h2>
-            <p class="dashboard-meta" id="period-range">Loading period...</p>
+            <p class="dashboard-meta">{{ period.start_date }} to {{ period.end_date }}{% if period.is_partial %} · partial period{% endif %}</p>
         </div>
+        {# Links, not buttons: switching periods is a page load now, and the
+           payload for both already came back in the same query. #}
         <div class="period-tabs" role="group" aria-label="Performance period">
-            <button type="button" class="period-tab is-active" data-period="current_month">This month</button>
-            <button type="button" class="period-tab" data-period="trailing_90_days">Last 90 days</button>
+            <a class="period-tab{% if period_key == 'current_month' %} is-active{% endif %}"
+               href="/mytesla/">This month</a>
+            <a class="period-tab{% if period_key == 'trailing_90_days' %} is-active{% endif %}"
+               href="/mytesla/?period=trailing_90_days">Last 90 days</a>
         </div>
     </div>
     {{ kpi_grid([
-        ("period-total-cost", "Total Cost", "selected period"),
-        ("period-km", "Distance", "odometer delta"),
-        ("period-energy-cost-km", "Energy Cost / km", "charging only"),
-        ("period-total-cost-km", "Total Cost / km", "all recorded costs"),
-        ("period-efficiency", "Charged Energy", "kWh / 100 km"),
-        ("period-change", "vs. Prior Month", "comparable cost / km"),
+        ("Total Cost", period.total_cost | money, "selected period"),
+        ("Distance", period.km_driven | number(suffix=" km"), "odometer delta"),
+        ("Energy Cost / km", period.energy_cost_per_km | money, "charging only"),
+        ("Total Cost / km", period.total_cost_per_km | money, "all recorded costs"),
+        ("Charged Energy", period.kwh_per_100km | number(suffix=" kWh"), "kWh / 100 km"),
+        ("vs. Prior Month",
+         "Not comparable" if change is none else "%s%s%%" | format("+" if change > 0 else "", change),
+         "comparable cost / km"),
     ], "cols-3") }}
     <p class="dashboard-note">Charged energy may not be consumed in the same period; the 90-day view reduces timing noise.</p>
 </section>
@@ -54,33 +76,96 @@
 <section class="dashboard-section data-coverage" aria-labelledby="coverage-title">
     <h2 class="dashboard-section-title" id="coverage-title">Data Coverage</h2>
     <div class="coverage-grid">
-        <p><span>Charging records</span><strong id="coverage-charging">Loading...</strong></p>
-        <p><span>Expense records</span><strong id="coverage-expenses">Loading...</strong></p>
-        <p><span>Odometer records</span><strong id="coverage-odometer">Loading...</strong></p>
+        <p><span>Charging records</span><strong>Since {{ data_coverage.charging_start_date or "No records" }}</strong></p>
+        <p><span>Expense records</span><strong>Since {{ data_coverage.expenses_start_date or "No records" }}</strong></p>
+        <p><span>Odometer records</span><strong>Since {{ data_coverage.odometer_start_date or "No records" }}</strong></p>
     </div>
 </section>
 
 <section class="dashboard-section">
     <h2 class="dashboard-section-title">Recent Charging Sessions</h2>
-    <p class="dashboard-meta" id="recent-charging-meta">Latest Supercharger / home charges</p>
-    <div id="recent-charging">Loading...</div>
+    <p class="dashboard-meta">{{ recent_charging | length }} latest charge{{ "" if recent_charging | length == 1 else "s" }}</p>
+    {% if recent_charging %}
+    <table class="dashboard-table">
+        <thead>
+            <tr>
+                <th class="col-date">Date</th>
+                <th>Provider</th>
+                <th class="col-amount">kWh</th>
+                <th class="col-amount">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in recent_charging %}
+            <tr>
+                <td class="col-date">{{ row.charge_date }}</td>
+                <td>{{ row.provider or "-" }}</td>
+                <td class="col-amount">{{ "%.2f" | format(row.kwh) }}</td>
+                <td class="col-amount">{{ row.amount | money }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No charging records yet.</p>
+    {% endif %}
 </section>
 
 <section class="dashboard-section">
     <h2 class="dashboard-section-title">Recent Car Expenses</h2>
-    <p class="dashboard-meta" id="recent-expenses-meta">Insurance, maintenance, tolls, etc.</p>
-    <div id="recent-car-expenses">Loading...</div>
+    <p class="dashboard-meta">{{ recent_expenses | length }} latest record{{ "" if recent_expenses | length == 1 else "s" }}</p>
+    {% if recent_expenses %}
+    <table class="dashboard-table">
+        <thead>
+            <tr>
+                <th class="col-date">Date</th>
+                <th>Item</th>
+                <th class="col-amount">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in recent_expenses %}
+            <tr>
+                <td class="col-date">{{ row.date }}</td>
+                <td>{{ row.item or "-" }}</td>
+                <td class="col-amount">{{ row.amount | money }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No car expense records yet.</p>
+    {% endif %}
 </section>
 
 <section class="dashboard-section">
     <h2 class="dashboard-section-title">Charging by Provider</h2>
     <p class="dashboard-meta">Effective price per provider (including free charging)</p>
-    <div id="provider-details" class="provider-details">Loading provider details...</div>
+    <div class="provider-details">
+        {% if charging_providers %}
+        <table class="dashboard-table">
+            <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th class="col-amount">Effective</th>
+                    <th class="col-amount">Paid only</th>
+                    <th class="col-amount">Free energy</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in charging_providers %}
+                <tr>
+                    <td>{{ row.provider }}</td>
+                    <td class="col-amount">{{ row.avg_price_per_kwh | money(suffix="/kWh") }}</td>
+                    <td class="col-amount">{{ row.paid_avg_price_per_kwh | money("No paid sessions", "/kWh") }}</td>
+                    <td class="col-amount">{{ row.free_kwh | number }} kWh ({{ row.free_sessions }})</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No charging records yet.</p>
+        {% endif %}
+    </div>
 </section>
-
-{% endblock %}
-
-{% block extra_scripts %}
-<script src="{{ static_url('js/dashboard.js') }}" defer></script>
-<script src="{{ static_url('js/tesla.js') }}" defer></script>
 {% endblock %}

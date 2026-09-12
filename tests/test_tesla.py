@@ -243,6 +243,18 @@ class TestDashboardAggregate:
         assert body["recent_charging"][0]["id"] == 1
         assert body["recent_expenses"][0]["item"] == "Insurance"
 
+    def test_the_dashboard_page_renders_from_the_same_payload(self, client_for):
+        """GET /mytesla/ and GET /api/tesla/dashboard run the same builder over
+        one session, so the HTML can never show numbers the JSON disagrees with.
+        No dependency override here — this is the real path."""
+        session = self._session()
+        html = client_for(session).get("/mytesla/").text
+
+        assert len(session.calls) == 9
+        assert "NT$ 2,500" in html   # stats.total_cost
+        assert "10,000 km" in html   # odometer
+        assert "Insurance" in html   # recent expenses row
+
     def test_page_load_costs_one_session_and_nine_queries(self, client_for):
         """Every widget the page still draws, in one round of queries. The
         month-bucketing aggregates went out with the charts — a DATE_TRUNC over

@@ -1,12 +1,11 @@
 """The HTML half: page rendering, error pages, and asset/caching policy.
 
-The pages are static templates — every number on the dashboard is fetched
-client-side — so rendering them for real is the cheapest meaningful check
-that templates, Jinja globals, and the routes still line up.
+The dashboard is rendered server-side now, so rendering these pages for real
+is the cheapest meaningful check that templates, Jinja filters, globals, and
+the routes still line up — and that the numbers actually reach the HTML.
 """
 
 import re
-from pathlib import Path
 
 import pytest
 
@@ -23,16 +22,48 @@ def test_pages_render(client, path):
     assert "</html>" in response.text
 
 
-def test_dashboard_ships_no_charting_library(client):
-    """The dashboard is numbers and tables only. Chart.js was removed with every
-    canvas it drew; pulling a charting bundle back in is the regression here."""
+def test_dashboard_renders_its_numbers_server_side(client):
+    """The point of dropping the dashboard JS: the figures are in the HTML the
+    server sends. A "Loading..." placeholder here means the page went back to
+    fetching its own data."""
     html = client.get("/mytesla/").text
-    assert "dashboard.js" in html
-    assert "tesla.js" in html
-    for needle in ("chart.custom.min.js", "chart.umd.min.js",
-                   "chartjs-plugin-datalabels.min.js", "<canvas"):
-        assert needle not in html, f"{needle} came back on /mytesla/"
-    assert client.get("/static/js/vendor/chart.custom.min.js").status_code == 404
+    assert "NT$ 2,500" in html      # stats.total_cost, thousands-separated
+    assert "10,000 km" in html      # odometer reading
+    assert "NT$ 5/kWh" in html      # provider effective price
+    assert "Insurance" in html      # recent car expenses table
+    assert "Loading..." not in html
+
+
+def test_dashboard_ships_no_javascript_of_its_own(client):
+    """Only the site-wide nav script survives; nothing on this page fetches."""
+    html = client.get("/mytesla/").text
+    assert "nav.js" in html
+    for needle in ("dashboard.js", "tesla.js", "<canvas", "chart", "fetch("):
+        assert needle not in html.lower(), f"{needle} came back on /mytesla/"
+
+
+def test_dashboard_shows_the_coverage_and_period_windows(client):
+    html = client.get("/mytesla/").text
+    assert "Since 2026-01-05" in html                        # collection start
+    assert "2026-03-01 to 2026-03-09 · partial period" in html
+    assert "-12.5%" in html                                  # month-over-month
+
+
+def test_period_switch_is_a_link(client):
+    """No JS means the two windows are two URLs, not a client-side toggle."""
+    assert 'href="/mytesla/?period=trailing_90_days"' in client.get("/mytesla/").text
+
+    html = client.get("/mytesla/?period=trailing_90_days").text
+    assert "2025-12-10 to 2026-03-09" in html
+    # That window has no odometer delta, so its per-km metrics stay unmeasured
+    assert "Not enough data" in html
+
+
+def test_unknown_period_falls_back_to_the_current_month(client):
+    """?period is a display toggle, not a resource — a bad value is not a 404."""
+    response = client.get("/mytesla/?period=nonsense")
+    assert response.status_code == 200
+    assert "2026-03-01 to 2026-03-09" in response.text
 
 
 def test_pages_serve_the_source_assets_directly(client):
@@ -51,34 +82,6 @@ def test_pages_use_svg_favicon_and_keep_apple_touch_icon(client):
     assert "images/favicon/apple-touch-icon.png" in html
     assert "favicon.ico" not in html
     assert "web-app-manifest-192x192.png" not in html
-
-
-def test_dashboard_includes_period_and_coverage_controls(client):
-    html = client.get("/mytesla/").text
-    for element_id in (
-        "period-total-cost", "period-energy-cost-km", "period-change",
-        "coverage-charging", "coverage-odometer", "provider-details",
-    ):
-        assert f'id="{element_id}"' in html
-    assert 'data-period="trailing_90_days"' in html
-
-
-def test_dashboard_calls_the_api_on_this_origin(client):
-    """The merged service serves both halves, so the JS must stay relative."""
-    js = Path("static/js/tesla.js").read_text()
-    assert 'const API_BASE = "";' in js
-    assert "api.jakewang.dev" not in js
-    assert "data-api-base" not in client.get("/mytesla/").text
-
-
-def test_dashboard_loads_from_the_single_aggregate_endpoint(client):
-    """Page load must stay one request. Fetching a per-widget endpoint here
-    instead is the regression this guards: it silently costs another round
-    trip and another DB session per widget added back."""
-    js = Path("static/js/tesla.js").read_text()
-    fetched = re.findall(r"loadJSON\(`\$\{API_BASE\}(/api/[^`]+)`", js)
-    assert fetched == ["/api/tesla/dashboard"]
-    assert "loadChart(" not in js
 
 
 @pytest.mark.parametrize("path", PAGES)

@@ -606,6 +606,8 @@ footer {
 }
 
 .period-tab {
+    display: inline-block;
+    text-decoration: none;
     border: 1px solid var(--code-border);
     border-radius: 999px;
     background: var(--bg-color);

@@ -29,7 +29,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.database import get_db
-from app.main import app
+from app.main import app, dashboard_payload
 
 TEST_API_KEY = "test-api-key"
 TEST_PASSWORD = "test-password"
@@ -91,6 +91,52 @@ class FakeSession:
         self.closed = True
 
 
+# What GET /mytesla/ renders. The page is server-rendered now, so tests that
+# only care about headers or markup would otherwise have to fake all nine of
+# the dashboard's queries; overriding the dependency keeps them to the point.
+# Shapes mirror tesla.get_dashboard() exactly — a key renamed there must be
+# renamed here, or the template silently renders a blank.
+DASHBOARD_PAYLOAD = {
+    "stats": {
+        "total_cost": 2500.0, "charging_cost": 500.0, "non_charging_cost": 2000.0,
+        "energy_kwh": 100.0, "avg_price_per_kwh": 5.0, "odometer_km": 10000,
+        "cost_per_km": 0.25, "charging_cost_per_km": 0.05,
+        "non_charging_cost_per_km": 0.2,
+    },
+    "data_coverage": {
+        "charging_start_date": "2026-01-05", "expenses_start_date": "2026-01-01",
+        "odometer_start_date": "2026-01-01", "last_updated": "2026-03-09",
+    },
+    "period_summary": {
+        "current_month": {
+            "start_date": "2026-03-01", "end_date": "2026-03-09", "is_partial": True,
+            "charging_cost": 200.0, "non_charging_cost": 100.0, "total_cost": 300.0,
+            "energy_kwh": 40.0, "km_driven": 100, "energy_cost_per_km": 2.0,
+            "total_cost_per_km": 3.0, "kwh_per_100km": 40.0,
+            "cost_per_km_change_pct": -12.5,
+        },
+        "trailing_90_days": {
+            "start_date": "2025-12-10", "end_date": "2026-03-09", "is_partial": True,
+            "charging_cost": 500.0, "non_charging_cost": 2000.0, "total_cost": 2500.0,
+            "energy_kwh": 100.0, "km_driven": None, "energy_cost_per_km": None,
+            "total_cost_per_km": None, "kwh_per_100km": None,
+        },
+    },
+    "charging_providers": [
+        {"provider": "Tesla", "total_kwh": 100.0, "total_amount": 500,
+         "avg_price_per_kwh": 5.0, "paid_kwh": 100.0, "paid_avg_price_per_kwh": 5.0,
+         "free_kwh": 0.0, "free_sessions": 0},
+    ],
+    "recent_charging": [
+        {"id": 1, "charge_date": "2026-01-05", "provider": "Tesla",
+         "amount": 500, "kwh": 100.0},
+    ],
+    "recent_expenses": [
+        {"id": 1, "date": "2026-01-01", "item": "Insurance", "amount": 2000},
+    ],
+}
+
+
 @pytest.fixture
 def fake_db():
     """Default healthy fake session returning no rows."""
@@ -99,8 +145,13 @@ def fake_db():
 
 @pytest.fixture
 def client(fake_db):
-    """TestClient wired to the fake session; override is removed after each test."""
+    """TestClient wired to the fake session; override is removed after each test.
+
+    The dashboard page also gets its canned payload here, so every test that
+    merely visits /mytesla/ keeps working without staging queries.
+    """
     app.dependency_overrides[get_db] = lambda: fake_db
+    app.dependency_overrides[dashboard_payload] = lambda: DASHBOARD_PAYLOAD
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

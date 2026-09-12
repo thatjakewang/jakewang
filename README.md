@@ -74,12 +74,18 @@ tests/             # pytest suite (no real DB)
 schema.sql         # reference DDL for rebuilding the database
 ```
 
-The dashboard is rendered client-side: `templates/tesla.html` only lays out empty
-containers, and `static/js/tesla.js` fetches every number from
-`/api/tesla/dashboard` on this same origin — one request carrying every widget's
-payload, served from a single DB session. Nothing needs a redeploy when new
-records land. It is KPI figures and tables only — there is no charting library,
-and no `<canvas>` anywhere; a test pins that.
+The dashboard is rendered server-side: `/mytesla/` calls the same
+`get_dashboard()` that `/api/tesla/dashboard` returns, resolves all nine queries
+in one session, and Jinja prints the numbers straight into the HTML. The page
+ships no JavaScript of its own — the only script on the site is
+`static/js/nav.js` for the mobile menu. Nothing needs a redeploy when new
+records land, and nothing needs a second round trip either. It is KPI figures
+and tables only; tests pin both the absence of a charting library and the
+presence of real numbers in the served HTML.
+
+The period switch (`This month` / `Last 90 days`) is a link to
+`?period=trailing_90_days`, not a client-side toggle: `get_period_summary()`
+already returns both windows in the same query.
 
 ## Environment Variables
 
@@ -288,7 +294,7 @@ automatically follows the latest reading.
 | Path | Description |
 |------|-------------|
 | `/` | Home — intro, project cards, skills |
-| `/mytesla/` | Tesla cost dashboard (fetches `/api/tesla/dashboard` client-side) |
+| `/mytesla/` | Tesla cost dashboard, server-rendered (`?period=trailing_90_days` for the 90-day window) |
 | `/login` | Sign-in (see Authentication above) |
 
 ## Caching
@@ -299,7 +305,7 @@ automatically follows the latest reading.
 |------|---------|-----|
 | `/static/*` | 1 year | URLs carry a `?v=<mtime>` cache-buster, so this is safe |
 | `/api/*` | 30s | Shortcuts entries should reach the dashboard promptly |
-| pages | 5min | They only change on redeploy |
+| pages | 60s | The dashboard's numbers now age with the page |
 | private paths | `no-store` | Belong to one signed-in user |
 
 Requests carrying `x-api-key` are never marked publicly cacheable, nor are

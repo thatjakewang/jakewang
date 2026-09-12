@@ -35,6 +35,35 @@ def static_url(filename: str) -> str:
     return f"/static/{filename}?v={_cached_static_version(filename)}"
 
 
+def _format_number(value: float | int) -> str:
+    """Thousands-separated, with a float's trailing ".0" dropped.
+
+    Matches what Number.toLocaleString() produced back when these numbers were
+    formatted in the browser, so the rendered page reads the same as before.
+    """
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    return f"{value:,}"
+
+
+def number(value, fallback: str = "Not enough data", suffix: str = "") -> str:
+    """Render a metric, or the fallback text when the API left it null.
+
+    Nulls are meaningful here: a month with no odometer delta has no cost per
+    km, and saying so beats printing a zero that looks like a real measurement.
+    """
+    if value is None:
+        return fallback
+    return f"{_format_number(value)}{suffix}"
+
+
+def money(value, fallback: str = "Not enough data", suffix: str = "") -> str:
+    """Same, prefixed with the currency these tables are all denominated in."""
+    if value is None:
+        return fallback
+    return f"NT$ {_format_number(value)}{suffix}"
+
+
 def current_year() -> int:
     """Footer copyright year. A function, not a value, so a long-running
     process doesn't keep serving the year it booted in."""
@@ -43,3 +72,5 @@ def current_year() -> int:
 
 templates.env.globals["static_url"] = static_url
 templates.env.globals["current_year"] = current_year
+templates.env.filters["number"] = number
+templates.env.filters["money"] = money

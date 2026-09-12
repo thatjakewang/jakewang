@@ -71,12 +71,13 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # How long browsers/proxies may cache public GET responses (seconds).
-# API data is kept short: entries added via iPhone Shortcuts should show up on
-# the dashboard right away — the browser cache can't be invalidated remotely,
-# so this window is the maximum staleness. Pages only change on redeploy, and
-# static assets carry a versioned URL so they can be cached for a year.
+# Both data windows are kept short: entries added via iPhone Shortcuts should
+# show up on the dashboard right away — the browser cache can't be invalidated
+# remotely, so this window is the maximum staleness. The dashboard is rendered
+# server-side, so its numbers age with the page, not with /api/. Static assets
+# carry a versioned URL and can be cached for a year.
 API_CACHE_MAX_AGE = 30
-PAGE_CACHE_MAX_AGE = 300
+PAGE_CACHE_MAX_AGE = 60
 STATIC_CACHE_MAX_AGE = int(timedelta(days=365).total_seconds())
 
 # Paths whose responses belong to the signed-in user alone. Without this list the
@@ -250,13 +251,43 @@ def home(request: Request):
     )
 
 
+# The two windows the dashboard's period switch offers, named as
+# /api/tesla/period-summary returns them.
+DASHBOARD_PERIODS = ("current_month", "trailing_90_days")
+
+
+def dashboard_payload(db: Session = Depends(get_db)) -> dict:
+    """Every number the dashboard page shows, from one session.
+
+    A dependency rather than a direct call so the page can be rendered against
+    a canned payload in tests without also faking nine queries.
+    """
+    return tesla.get_dashboard(db)
+
+
 @app.get("/mytesla/")
-def tesla_dashboard(request: Request):
-    """Tesla cost dashboard; static/js/tesla.js fills in every number."""
+def tesla_dashboard(
+    request: Request,
+    period: str = "current_month",
+    data: dict = Depends(dashboard_payload),
+):
+    """Tesla cost dashboard, rendered server-side in one DB session.
+
+    Reuses tesla.get_dashboard() — the very payload /api/tesla/dashboard
+    returns — so the page and the JSON cannot drift apart. An unknown ?period
+    falls back to the current month rather than 404ing: it is a display toggle,
+    not a resource.
+    """
+    if period not in DASHBOARD_PERIODS:
+        period = DASHBOARD_PERIODS[0]
     return templates.TemplateResponse(
         request=request,
         name="tesla.html",
-        context={"meta_title": "Tesla Cost Tracker – Jake Wang"},
+        context={
+            "meta_title": "Tesla Cost Tracker – Jake Wang",
+            "period_key": period,
+            **data,
+        },
     )
 
 
