@@ -279,7 +279,8 @@ def get_monthly_summary(db: Session = Depends(get_db)):
 
     Derived fields (cost_per_km, kwh_per_100km) are null when a month has no
     odometer delta to divide by; months with no activity at all are absent.
-    Powers the Monthly Driving Cost / Efficiency / Cumulative Cost charts.
+    No page renders this any more — the dashboard's monthly charts were removed
+    with Chart.js. Kept as a slice for anything that wants the history.
     """
     return build_monthly_summary(db, charging_by_month(db))
 

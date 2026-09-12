@@ -2,14 +2,11 @@
   "name": "main-site-assets",
   "private": true,
   "scripts": {
-    "build": "npm run build:charts && npm run build:scripts && npm run build:styles",
-    "build:charts": "esbuild frontend/chart-entry.js --bundle --minify --format=iife --legal-comments=inline --outfile=static/js/vendor/chart.custom.min.js",
+    "build": "npm run build:scripts && npm run build:styles",
     "build:scripts": "esbuild frontend/js/dashboard.js frontend/js/tesla.js frontend/js/nav.js --minify --outdir=static/js --outbase=frontend/js --out-extension:.js=.min.js",
     "build:styles": "esbuild frontend/css/style.css --minify --outfile=static/css/style.min.css"
   },
   "devDependencies": {
-    "chart.js": "4.4.9",
-    "chartjs-plugin-datalabels": "2.2.0",
     "esbuild": "0.25.9"
   }
 }

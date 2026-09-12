@@ -1,7 +1,6 @@
 /* Data loaders for the Tesla cost dashboard (templates/tesla.html).
-   Uses the shared builders in dashboard.js; loaded with defer after the custom
-   Chart.js bundle and dashboard.js. The API is served from this same
-   origin, so every URL below is root-relative.
+   Uses the shared builders in dashboard.js; loaded with defer after it. The API
+   is served from this same origin, so every URL below is root-relative.
 
    The whole page comes from ONE request: /api/tesla/dashboard returns what the
    ten per-widget endpoints (/stats, /expenses, /charging/providers, …) return,
@@ -83,56 +82,8 @@ function renderPeriodSummary(periods) {
     });
 }
 
-// Spending by category (all-time)
-function renderExpenseBreakdown(data) {
-    renderHorizontalBarChart("costBreakdownChart", data, {
-        labelKey: "item",
-        valueKey: "total_amount",
-        colorMap: EXPENSE_ITEM_COLORS
-    });
-}
-
-// Charging by provider
+// Charging by provider: effective price, paid-only price, and free energy
 function renderProviders(data) {
-    const labels = data.map(row => row.provider);
-
-    renderBarLineChart("providerChart", {
-        labels: labels,
-        bar: {
-            label: "Total Spent (NTD)",
-            data: data.map(row => row.total_amount),
-            colors: mapColors(labels, PROVIDER_COLORS),
-            // White value labels inside the bars (hidden for tiny bars)
-            datalabels: {
-                anchor: "center",
-                align: "center",
-                color: "#fff",
-                font: { weight: "bold", size: 11, family: FONT_FAMILY },
-                formatter: value => (value / 1000).toFixed(1) + "k",
-                display: ctx => ctx.dataset.data[ctx.dataIndex] > 1500
-            }
-        },
-        line: {
-            label: "Avg Cost (NTD/kWh)",
-            data: data.map(row => row.avg_price_per_kwh),
-            pointRadius: 5,
-            // Red price labels above each point
-            datalabels: {
-                anchor: "end",
-                align: "top",
-                offset: 4,
-                color: "#e31937",
-                font: { weight: "bold", size: 11, family: FONT_FAMILY },
-                formatter: value => "$" + value.toFixed(1)
-            }
-        },
-        yTitle: "Total Spent (NTD)",
-        y1Title: "NTD / kWh",
-        paddingTop: 24,
-        yTicksInThousands: true,
-        moneyTooltip: true
-    });
-
     buildTable(
         "provider-details",
         [
@@ -151,125 +102,6 @@ function renderProviders(data) {
             { value: `${row.free_kwh.toLocaleString()} kWh (${row.free_sessions})`, cls: "col-amount" },
         ]
     );
-}
-
-// Per-session charging data feeds both the scatter chart (kWh x cost, colored
-// by provider) and the distribution histogram below.
-function renderChargingSessions(sessions) {
-    renderScatterChart("chargingScatterChart", sessions, {
-        xKey: "kwh",
-        yKey: "amount",
-        groupKey: "provider",
-        colorMap: PROVIDER_COLORS,
-        xTitle: "kWh",
-        yTitle: "Cost (NTD)",
-        formatX: v => `${v} kWh`,
-        formatY: v => `NT$ ${v.toLocaleString()}`
-    });
-
-    // Histogram with switchable metric (shows skew); the dropdown re-bins
-    // the already-fetched sessions in place, no extra request.
-    const metrics = {
-        amount: {
-            values: sessions.map(s => s.amount),
-            color: "#3b82f6",
-            xTitle: "Cost per session (NTD)",
-            formatBin: (lo, hi) => `${Math.round(lo)}–${Math.round(hi)}`
-        },
-        kwh: {
-            values: sessions.map(s => s.kwh),
-            color: "#10b981",
-            xTitle: "Energy per session (kWh)",
-            formatBin: (lo, hi) => `${lo.toFixed(0)}–${hi.toFixed(0)}`
-        },
-        price: {
-            // Skip sessions with zero kWh to avoid divide-by-zero / Infinity bins
-            values: sessions.filter(s => s.kwh > 0).map(s => s.amount / s.kwh),
-            color: "#f59e0b",
-            xTitle: "Price (NTD/kWh)",
-            formatBin: (lo, hi) => `${lo.toFixed(1)}–${hi.toFixed(1)}`
-        }
-    };
-
-    const draw = key => {
-        const m = metrics[key];
-        renderHistogram("chargingHistogram", m.values, {
-            binCount: 12,
-            color: m.color,
-            xTitle: m.xTitle,
-            yTitle: "Sessions",
-            formatBin: m.formatBin
-        });
-    };
-
-    draw("amount");
-    document.getElementById("histogramMetric")
-        .addEventListener("change", e => draw(e.target.value));
-}
-
-// Monthly charging trend
-function renderChargingTrend(data) {
-    renderBarLineChart("trendChart", {
-        labels: data.map(row => row.month),
-        bar: {
-            label: "Total Spent (NTD)",
-            data: data.map(row => row.total_amount),
-            colors: "rgba(59, 130, 246, 0.7)"
-        },
-        line: {
-            label: "Avg Price (NTD/kWh)",
-            data: data.map(row => row.avg_price_per_kwh)
-        },
-        yTitle: "Monthly Spending (NTD)",
-        y1Title: "NTD / kWh"
-    });
-}
-
-/* /monthly-summary feeds three charts: a running total of each month's
-   total_cost (= total cost of ownership over time), plus the per-km cost and
-   efficiency the backend derives from the odometer deltas. Months with no
-   odometer reading to difference against carry nulls, which Chart.js draws as
-   gaps in the line rather than as zeroes. */
-function renderCumulativeCost(data) {
-    let runningTotal = 0;
-    renderLineChart("cumulativeCostChart", {
-        labels: data.map(row => row.month),
-        label: "Cumulative Cost",
-        data: data.map(row => (runningTotal += row.total_cost)),
-        formatValue: v => `NT$ ${v.toLocaleString()}`
-    });
-}
-
-function renderMonthlyCostPerKm(data) {
-    renderBarLineChart("monthlyCostPerKmChart", {
-        labels: data.map(row => row.month),
-        bar: {
-            label: "Distance Driven (km)",
-            data: data.map(row => row.km_driven),
-            colors: "rgba(59, 130, 246, 0.7)"
-        },
-        line: {
-            label: "Total Cost (NTD/km)",
-            data: data.map(row => row.cost_per_km)
-        },
-        yTitle: "km Driven",
-        y1Title: "NTD / km",
-        // Index-mode tooltips include months a dataset has no value for.
-        tooltipLabel: ctx => ctx.parsed.y == null
-            ? ""
-            : ctx.dataset.yAxisID === "y"
-                ? ` Driven: ${ctx.parsed.y.toLocaleString()} km`
-                : ` Cost: NT$ ${ctx.parsed.y.toFixed(2)} / km`
-    });
-}
-
-function renderMonthlyEfficiency(data) {
-    renderLineChart("monthlyEfficiencyChart", {
-        labels: data.map(row => row.month),
-        label: "Efficiency",
-        data: data.map(row => row.kwh_per_100km),
-        formatValue: v => `${v} kWh`
-    });
 }
 
 // Recent charging sessions table
@@ -339,22 +171,8 @@ const WIDGETS = [
         showCoverageError],
     ["period performance", "period_summary", renderPeriodSummary,
         () => setKpiErrors(PERIOD_KPI_IDS)],
-    ["spending breakdown", "expenses", renderExpenseBreakdown,
-        () => showError("costBreakdownChart", "Failed to load spending breakdown")],
     ["charging provider data", "charging_providers", renderProviders,
-        () => showError("providerChart", "Failed to load charging provider data")],
-    ["charging sessions", "charging_sessions", renderChargingSessions, () => {
-        showError("chargingScatterChart", "Failed to load charging session data");
-        showError("chargingHistogram", "Failed to load charging session data");
-    }],
-    ["monthly trend data", "charging_monthly_trend", renderChargingTrend,
-        () => showError("trendChart", "Failed to load monthly trend data")],
-    ["cumulative cost chart", "monthly_summary", renderCumulativeCost,
-        () => showError("cumulativeCostChart", "Failed to load cumulative cost data")],
-    ["monthly cost per km", "monthly_summary", renderMonthlyCostPerKm,
-        () => showError("monthlyCostPerKmChart", "Failed to load monthly cost per km")],
-    ["monthly efficiency", "monthly_summary", renderMonthlyEfficiency,
-        () => showError("monthlyEfficiencyChart", "Failed to load monthly efficiency")],
+        () => showError("provider-details", "Failed to load charging provider data")],
     ["recent charging", "recent_charging", renderRecentCharging,
         () => showError("recent-charging", "Failed to load recent charges")],
     ["recent car expenses", "recent_expenses", renderRecentExpenses,

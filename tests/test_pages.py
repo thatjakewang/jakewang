@@ -23,29 +23,16 @@ def test_pages_render(client, path):
     assert "</html>" in response.text
 
 
-def test_dashboard_includes_all_charts(client):
+def test_dashboard_ships_no_charting_library(client):
+    """The dashboard is numbers and tables only. Chart.js was removed with every
+    canvas it drew; pulling a charting bundle back in is the regression here."""
     html = client.get("/mytesla/").text
-    for canvas_id in (
-        "costBreakdownChart",
-        "providerChart",
-        "chargingScatterChart",
-        "chargingHistogram",
-        "trendChart",
-        "cumulativeCostChart",
-        "monthlyCostPerKmChart",
-        "monthlyEfficiencyChart",
-    ):
-        assert canvas_id in html, f"missing canvas #{canvas_id}"
-
-
-def test_dashboard_uses_the_custom_chart_bundle(client):
-    html = client.get("/mytesla/").text
-    assert "chart.custom.min.js" in html
     assert "dashboard.min.js" in html
     assert "tesla.min.js" in html
-    assert "chart.umd.min.js" not in html
-    assert "chartjs-plugin-datalabels.min.js" not in html
-    assert client.get("/static/js/vendor/chart.custom.min.js").status_code == 200
+    for needle in ("chart.custom.min.js", "chart.umd.min.js",
+                   "chartjs-plugin-datalabels.min.js", "<canvas"):
+        assert needle not in html, f"{needle} came back on /mytesla/"
+    assert client.get("/static/js/vendor/chart.custom.min.js").status_code == 404
 
 
 def test_pages_serve_minified_site_assets(client):

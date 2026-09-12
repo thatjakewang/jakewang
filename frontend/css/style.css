@@ -719,24 +719,6 @@ footer {
     white-space: nowrap;
 }
 
-/* Chart slot — keeps minimal aesthetic, no card chrome */
-.dashboard-chart {
-    position: relative;
-    height: 280px;
-    margin-top: 12px;
-}
-
-/* Metric picker (e.g. the histogram's cost / kWh / price switcher) */
-.dashboard-select {
-    font-family: inherit;
-    font-size: 0.9rem;
-    color: var(--text-color);
-    background: var(--subtle-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 3px;
-    padding: 6px 10px;
-}
-
 /* Responsive */
 @media (max-width: 720px) {
     .kpi-grid,

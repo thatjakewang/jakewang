@@ -19,7 +19,7 @@ jobs:
         run: |
           npm ci
           npm run build
-          git diff --exit-code -- static/css/style.min.css static/js/nav.min.js static/js/dashboard.min.js static/js/tesla.min.js static/js/vendor/chart.custom.min.js
+          git diff --exit-code -- static/css/style.min.css static/js/nav.min.js static/js/dashboard.min.js static/js/tesla.min.js
 
       - uses: actions/setup-python@v5
         with:
