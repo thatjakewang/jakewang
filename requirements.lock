@@ -16,8 +16,6 @@ h11==0.16.0
     # via uvicorn
 idna==3.18
     # via anyio
-itsdangerous==2.2.0
-    # via -r requirements.txt
 jinja2==3.1.6
     # via -r requirements.txt
 limits==5.8.0
@@ -40,8 +38,6 @@ python-dotenv==1.2.2
     # via
     #   -r requirements.txt
     #   pydantic-settings
-python-multipart==0.0.31
-    # via -r requirements.txt
 slowapi==0.1.9
     # via -r requirements.txt
 sqlalchemy==2.0.49

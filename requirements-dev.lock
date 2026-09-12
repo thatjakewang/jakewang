@@ -45,10 +45,6 @@ idna==3.18
     #   httpx
 iniconfig==2.3.0
     # via pytest
-itsdangerous==2.2.0
-    # via
-    #   -c requirements.lock
-    #   -r requirements.txt
 jinja2==3.1.6
     # via
     #   -c requirements.lock
@@ -94,10 +90,6 @@ python-dotenv==1.2.2
     #   -c requirements.lock
     #   -r requirements.txt
     #   pydantic-settings
-python-multipart==0.0.31
-    # via
-    #   -c requirements.lock
-    #   -r requirements.txt
 slowapi==0.1.9
     # via
     #   -c requirements.lock

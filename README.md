@@ -17,44 +17,22 @@ metadata.
 
 ## Authentication
 
-Two separate mechanisms, on purpose. They must not be merged.
+One credential, one direction: `x-api-key` on the three write endpoints, used
+by iPhone Shortcuts. Everything the site serves to a browser is public, so
+there is no login, no session, and no user table.
 
-| Client | What it is | Mechanism |
-|--------|-----------|-----------|
-| **Human**, in a browser | Reading private pages | Signed session cookie (`/login`) |
-| **Machine**, headless | iPhone Shortcuts, automated collectors | `x-api-key` header |
+There used to be a browser login — a signed session cookie and an scrypt
+password hash — built for private pages that were never added. It guarded
+nothing, so it went. Reintroducing it means bringing back `itsdangerous`,
+`python-multipart`, a session middleware, and two required secrets in `.env`;
+worth knowing before adding a page that needs it.
 
-An automated writer must never be pushed through the login form — that would
-only mean teaching a script to POST one. Conversely a session cookie grants no
-write access: `x-api-key` is still required for every POST.
-
-There is exactly one user, so there is **no users table** and no registration.
-The password lives in `.env` as an scrypt hash (`hashlib.scrypt`, standard
-library) and the session is a signed cookie, so nothing is stored server-side.
-CSRF is handled by `SameSite=Lax` rather than tokens: every form here is
-same-origin, and a cross-site POST never carries the cookie. `POST /login` is
-capped at 5/minute, far below the site-wide 600/minute.
-
-Generate the two secrets and paste them into `.env`:
-
-```bash
-python -m app.auth
+```env
+SHORTCUT_API_KEY=<the key your Shortcuts send>
 ```
 
-Guard a new private route by depending on `require_login`; add its path prefix to
-`PRIVATE_PATH_PREFIXES` in `app/main.py` at the same time, or the generic
-`/api/*` cache rule will mark its responses publicly cacheable:
-
-```python
-from app.auth import require_login
-
-@router.get("/api/papers")
-def list_papers(_=Depends(require_login)):
-    ...
-```
-
-Signed-out requests are split by client, matching the error handling: a page
-request gets a 303 to `/login?next=…`, an `/api/` request gets a JSON 401.
+A request without the header — or with the wrong one — gets a JSON 401 before
+the payload is even validated.
 
 ## Project Layout
 
@@ -63,13 +41,12 @@ app/
   main.py          # FastAPI app: static mount, page routes, middleware, router mounting
   config.py        # pydantic-settings configuration (.env)
   database.py      # engine + per-request session
-  dependencies.py  # x-api-key verification (machine clients)
-  auth.py          # browser login: password hashing, session, require_login guard
+  dependencies.py  # x-api-key verification (the only credential)
   limiter.py       # the shared rate limiter (routers need it, so not in main.py)
   templating.py    # the Jinja environment + its globals (same reason)
   utils.py         # row serialization, response envelope, date helpers
-  routers/         # auth pages, the Tesla writes, and the queries behind them
-templates/         # Jinja page shells (base + home + dashboard + login + errors)
+  routers/         # the Tesla writes, and the queries behind the dashboard
+templates/         # Jinja page shells (base + home + dashboard + error)
 static/            # The JS/CSS the browser gets, plus favicons — no build step
 tests/             # pytest suite (no real DB)
 schema.sql         # reference DDL for rebuilding the database
@@ -95,20 +72,13 @@ All configuration is loaded via `pydantic-settings` from `.env` (or environment 
 ```env
 DATABASE_URL=postgresql://user:password@host:port/dbname
 SHORTCUT_API_KEY=your_api_key
-SESSION_SECRET=your_session_secret          # signs the session cookie
-ADMIN_PASSWORD_HASH=scrypt$<salt>$<hash>    # from `python -m app.auth`
-SESSION_COOKIE_SECURE=true                  # set false for local http only
 APP_TIMEZONE=Asia/Taipei
 TESLA_ODOMETER_KM=21471
 ```
 
-`SESSION_SECRET` and `ADMIN_PASSWORD_HASH` have no defaults — the app refuses to
-boot without them rather than running on a guessable secret. `SESSION_MAX_AGE`
-is optional and defaults to 14 days.
-
-When developing locally over `http://`, set `SESSION_COOKIE_SECURE=false`;
-otherwise the browser will not send the cookie back and login silently never
-sticks.
+`DATABASE_URL` and `SHORTCUT_API_KEY` have no defaults — a deployment that
+forgot either fails to boot instead of running against the wrong database or
+an open write API. The other two fall back to the values above.
 
 ## Setup & Run
 
@@ -215,9 +185,6 @@ that `/api/` stays POST-only.
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Health check (pings the DB; 503 if unreachable) |
-| GET | `/login` | Sign-in page (303 to `?next=` if already signed in) |
-| POST | `/login` | Form login — `password`, optional `next`. Rate limited 5/min |
-| POST | `/logout` | Clear the session (POST only, so no link can sign you out) |
 | GET | `/robots.txt` | Allows search engines, blocks the AI crawlers |
 
 > Note: all tables carry an `id` (SERIAL) column, which is what the writes return.
@@ -294,7 +261,6 @@ automatically follows the latest reading.
 |------|-------------|
 | `/` | Home — intro, project cards, skills |
 | `/mytesla/` | Tesla cost dashboard, server-rendered (`?period=trailing_90_days` for the 90-day window) |
-| `/login` | Sign-in (see Authentication above) |
 
 ## Caching
 
@@ -304,12 +270,11 @@ automatically follows the latest reading.
 |------|---------|-----|
 | `/static/*` | 1 year | URLs carry a `?v=<mtime>` cache-buster, so this is safe |
 | pages | 60s | The dashboard's numbers are rendered into them |
-| private paths | `no-store` | Belong to one signed-in user |
 
 Only `GET`s that return 200 get a window at all, so the API's writes never do.
 Requests carrying `x-api-key` are never marked publicly cacheable either, nor
-are responses that set a session cookie, nor anything matching
-`PRIVATE_PATH_PREFIXES` in `app/main.py`.
+is any response that sets a cookie. Nothing on the site is private any more, so
+there is no `no-store` tier left.
 
 There is **no CORS layer**: pages and API share an origin, so nothing cross-origin
 happens. A test pins this, since adding CORS back would quietly re-open the API to

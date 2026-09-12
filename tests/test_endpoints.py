@@ -1,6 +1,5 @@
 """HTTP-level tests for the API half: health, api-key auth, cache headers, gzip,
-rate limiting. The HTML pages are covered in test_pages.py, and browser login in
-test_auth.py.
+rate limiting. The HTML pages are covered in test_pages.py.
 
 All DB access goes through FakeSession — no real database is involved.
 TestRateLimit stays last in the file: it deliberately exhausts the budget
@@ -12,7 +11,7 @@ from datetime import date
 import pytest
 
 from app.main import app
-from tests.conftest import TEST_API_KEY, TEST_PASSWORD, FakeResult, FakeSession
+from tests.conftest import TEST_API_KEY, FakeResult, FakeSession
 
 
 class TestHealth:
@@ -30,7 +29,10 @@ class TestHealth:
 
 
 class TestAuth:
-    """Every protected endpoint is a POST, so the key check is pinned on one of them."""
+    """Every protected endpoint is a POST, so the key check is pinned on one of
+    them. The x-api-key header is the site's only credential — the browser
+    login it used to sit beside was deleted along with the private pages it
+    never ended up guarding."""
 
     PROTECTED_PATH = "/api/tesla/car-expenses"
     PAYLOAD = {"date": "2026-07-06", "item": "Insurance", "amount": 25000}
@@ -63,52 +65,20 @@ class TestAuth:
         assert body["data"]["id"] == 1
 
 
-class TestApiKeyIsIndependentOfLogin:
-    """The two halves of auth must never become entangled.
-
-    Browser login (test_auth.py) exists for private pages; the write endpoints
-    are driven by iPhone Shortcuts and, later, an automated collector. Putting
-    those behind the session would mean teaching a script to POST a login form.
-    """
-
-    PROTECTED_PATH = "/api/tesla/car-expenses"
-    PAYLOAD = {"date": "2026-07-06", "item": "Insurance", "amount": 25000}
-
-    def test_write_succeeds_with_no_session_cookie(self, client_for):
-        session = FakeSession(results=[FakeResult(rows=[{"id": 2}])])
-        client = client_for(session)
-        assert "session" not in client.cookies
-        response = client.post(
-            self.PROTECTED_PATH, json=self.PAYLOAD, headers={"x-api-key": TEST_API_KEY}
-        )
-        assert response.status_code == 200
-
-    def test_a_session_alone_does_not_authorize_a_write(self, client_for):
-        """Being signed in must not silently grant the API key's privileges."""
-        client = client_for(FakeSession())
-        assert client.post("/login", data={"password": TEST_PASSWORD}).status_code == 200
-        response = client.post(self.PROTECTED_PATH, json=self.PAYLOAD)
-        assert response.status_code == 401
-
-
 def test_the_api_is_write_only():
-    """Every Tesla route is a POST from iPhone Shortcuts. The read endpoints
+    """Every /api/ route is a POST from iPhone Shortcuts. The read endpoints
     went when the dashboard stopped fetching itself — a GET reappearing here is
     an endpoint nothing asked for, and it would need a cache rule of its own.
-
-    Asserted against the router rather than app.routes: test_auth mounts its
-    own /api/ route on the shared app to exercise the login guard.
     """
-    from app.routers.tesla import router
-
     assert {
         (route.path, method)
-        for route in router.routes
+        for route in app.routes
+        if getattr(route, "path", "").startswith("/api/")
         for method in route.methods - {"HEAD", "OPTIONS"}
     } == {
-        ("/charging-records", "POST"),
-        ("/car-expenses", "POST"),
-        ("/odometer", "POST"),
+        ("/api/tesla/charging-records", "POST"),
+        ("/api/tesla/car-expenses", "POST"),
+        ("/api/tesla/odometer", "POST"),
     }
 
 

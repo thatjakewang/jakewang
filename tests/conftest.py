@@ -14,16 +14,6 @@ import os
 os.environ["DATABASE_URL"] = "postgresql://test:test@localhost:5432/test_never_connected"
 os.environ["SHORTCUT_API_KEY"] = "test-api-key"
 os.environ["APP_TIMEZONE"] = "Asia/Taipei"
-os.environ["SESSION_SECRET"] = "test-session-secret-not-used-anywhere-real"
-# Precomputed hash of TEST_PASSWORD below (app.auth.hash_password). Hardcoded
-# rather than computed here so this file still imports no app module, and so the
-# scrypt work happens once at authoring time instead of on every test run.
-os.environ["ADMIN_PASSWORD_HASH"] = (
-    "scrypt$866d11282386b738d80dfa028db59894"
-    "$131de18c1b097f8b2185eb07c4fe28994641dbba9f0cad3378d1e93876824362"
-)
-# TestClient speaks http, so a Secure cookie would never come back.
-os.environ["SESSION_COOKIE_SECURE"] = "false"
 
 import pytest
 from fastapi.testclient import TestClient
@@ -32,7 +22,6 @@ from app.database import get_db
 from app.main import app, dashboard_payload
 
 TEST_API_KEY = "test-api-key"
-TEST_PASSWORD = "test-password"
 
 
 class FakeResult:
@@ -155,16 +144,6 @@ def client(fake_db):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def logged_in_client(client):
-    """A TestClient that has completed a real login, so it carries the session cookie."""
-    response = client.post(
-        "/login", data={"password": TEST_PASSWORD}, follow_redirects=False
-    )
-    assert response.status_code == 303, "login fixture failed to authenticate"
-    return client
 
 
 @pytest.fixture

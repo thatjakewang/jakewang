@@ -46,13 +46,6 @@
                        class="nav-link{% if request.url.path == '/mytesla/' %} is-active{% endif %}">MyTesla</a>
                 </nav>
                 <a class="header-cta" href="https://github.com/thatjakewang" target="_blank" rel="noopener noreferrer">GitHub</a>
-                {# Only rendered for a signed-in session (app/auth.py). POST, so
-                   no link or prefetch can sign you out by accident. #}
-                {% if request.session.get('user') %}
-                <form class="header-logout" method="post" action="/logout">
-                    <button type="submit" class="nav-link nav-link-button">Log out</button>
-                </form>
-                {% endif %}
             </div>
         </div>
     </header>

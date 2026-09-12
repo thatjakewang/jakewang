@@ -23,7 +23,3 @@ limiter = Limiter(
     default_limits=["600/minute"],
     headers_enabled=True,
 )
-
-# Login is the one endpoint where an attacker gains something by retrying, so it
-# gets a budget far below the site-wide one. Applied in app/routers/auth.py.
-LOGIN_RATE_LIMIT = "5/minute"
