@@ -1,5 +1,6 @@
-# Top-level dependencies only. The fully pinned set (sub-dependencies included)
-# lives in requirements.lock — install that in deployments for reproducibility.
+# The packages this app chose. The fully pinned set (these plus every
+# sub-dependency) lives in requirements.lock — install that one everywhere.
+# Regenerate it with:  uv pip compile requirements.txt -o requirements.lock
 fastapi==0.136.1
 uvicorn==0.46.0
 SQLAlchemy==2.0.49

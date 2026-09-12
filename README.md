@@ -48,7 +48,6 @@ app/
   routers/         # the Tesla writes, and the queries behind the dashboard
 templates/         # Jinja page shells (base + home + dashboard + error)
 static/            # The JS/CSS the browser gets, plus favicons — no build step
-tests/             # pytest suite (no real DB)
 schema.sql         # reference DDL for rebuilding the database
 ```
 
@@ -58,8 +57,7 @@ straight into the HTML. The page
 ships no JavaScript of its own — the only script on the site is
 `static/js/nav.js` for the mobile menu. Nothing needs a redeploy when new
 records land, and nothing needs a second round trip either. It is KPI figures
-and tables only; tests pin both the absence of a charting library and the
-presence of real numbers in the served HTML.
+and tables only.
 
 The period switch (`This month` / `Last 90 days`) is a link to
 `?period=trailing_90_days`, not a client-side toggle: `get_period_summary()`
@@ -94,18 +92,16 @@ The site is then at **http://localhost:8000** and the API under `/api/`.
 Interactive API docs (`/docs`, `/redoc`, `/openapi.json`) are disabled on purpose —
 see `app/main.py`. Use the endpoint tables below as the reference.
 
-Dependencies: `requirements.txt` and `requirements-dev.txt` list top-level packages;
-the `.lock` files beside them are the fully pinned sets that actually get installed.
-Re-generate both, in this order, after changing either:
+Dependencies: `requirements.txt` lists the eight packages this app actually
+chose; `requirements.lock` is the fully pinned set — those eight plus everything
+they pull in — and is what gets installed. Regenerate it after changing a pin:
 
 ```bash
 uv pip compile requirements.txt -o requirements.lock
-uv pip compile requirements-dev.txt -c requirements.lock -o requirements-dev.lock
 ```
 
-The `-c` flag constrains every shared package to the version `requirements.lock`
-deploys, so the only difference between the two locks is the test-only tree —
-tests never run against a different dependency set than production.
+There is no automated test suite and no CI: `git push` runs nothing. Check
+changes by running the app locally before deploying.
 
 ### Frontend assets
 
@@ -114,21 +110,9 @@ JavaScript and CSS the browser receives, and editing a file there is the whole
 deployment. esbuild used to minify sources from a `frontend/` directory into
 committed `.min.*` files; that saved ~3KB gzipped per first visit and cost a
 rebuild-and-commit step on every change, so it was dropped along with Chart.js.
-A test asserts no `.min.*` URL comes back, in case a bundler is ever
-reintroduced without the toolchain to keep it honest.
 
 Assets are served with a one-year `Cache-Control` and a `?v=<mtime>`
 cache-buster, so an edit reaches browsers on the next page load.
-
-## Tests
-
-```bash
-pip install -r requirements-dev.lock
-python -m pytest tests/
-```
-
-Tests never touch a real database — DB sessions are faked.
-GitHub Actions (`.github/workflows/ci.yml`) runs the suite on every push and pull request.
 
 ## Deployment
 
@@ -228,8 +212,7 @@ psql "$DATABASE_URL" -c "SELECT conrelid::regclass AS tbl, conname
 dashboard reads nothing over HTTP, because it is rendered server-side from the
 same queries. Those read endpoints existed while the page fetched its own data
 and were removed once nothing called them — the queries live on as plain
-functions in `app/routers/tesla.py`, called by `get_dashboard()`. A test pins
-that `/api/` stays POST-only.
+functions in `app/routers/tesla.py`, called by `get_dashboard()`.
 
 ### Public
 
@@ -327,6 +310,6 @@ Requests carrying `x-api-key` are never marked publicly cacheable either, nor
 is any response that sets a cookie. Nothing on the site is private any more, so
 there is no `no-store` tier left.
 
-There is **no CORS layer**: pages and API share an origin, so nothing cross-origin
-happens. A test pins this, since adding CORS back would quietly re-open the API to
-other sites.
+There is **no CORS layer**: pages and API share an origin, so nothing
+cross-origin happens. Adding one back would quietly re-open the write API to
+other sites — don't, unless something genuinely needs to call it from elsewhere.

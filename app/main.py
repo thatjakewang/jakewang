@@ -213,20 +213,11 @@ def home(request: Request):
 DASHBOARD_PERIODS = ("current_month", "trailing_90_days")
 
 
-def dashboard_payload(db: Session = Depends(get_db)) -> dict:
-    """Every number the dashboard page shows, from one session.
-
-    A dependency rather than a direct call so the page can be rendered against
-    a canned payload in tests without also faking nine queries.
-    """
-    return tesla.get_dashboard(db)
-
-
 @app.get("/mytesla/")
 def tesla_dashboard(
     request: Request,
     period: str = "current_month",
-    data: dict = Depends(dashboard_payload),
+    db: Session = Depends(get_db),
 ):
     """Tesla cost dashboard, rendered server-side in one DB session.
 
@@ -243,7 +234,7 @@ def tesla_dashboard(
         context={
             "meta_title": "Tesla Cost Tracker – Jake Wang",
             "period_key": period,
-            **data,
+            **tesla.get_dashboard(db),
         },
     )
 
