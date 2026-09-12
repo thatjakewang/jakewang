@@ -38,14 +38,13 @@ the payload is even validated.
 
 ```text
 app/
-  main.py          # FastAPI app: static mount, page routes, middleware, router mounting
+  main.py          # FastAPI app: static mount, page routes, middleware, rate limiter
   config.py        # pydantic-settings configuration (.env)
   database.py      # engine + per-request session
   dependencies.py  # x-api-key verification (the only credential)
-  limiter.py       # the shared rate limiter (routers need it, so not in main.py)
-  templating.py    # the Jinja environment + its globals (same reason)
+  templating.py    # the Jinja environment, its globals, and the number filters
   utils.py         # row serialization, response envelope, date helpers
-  routers/         # the Tesla writes, and the queries behind the dashboard
+  tesla.py         # the three writes, and the queries behind the dashboard
 templates/         # Jinja page shells (base + home + dashboard + error)
 static/            # The JS/CSS the browser gets, plus favicons — no build step
 schema.sql         # reference DDL for rebuilding the database
@@ -212,7 +211,7 @@ psql "$DATABASE_URL" -c "SELECT conrelid::regclass AS tbl, conname
 dashboard reads nothing over HTTP, because it is rendered server-side from the
 same queries. Those read endpoints existed while the page fetched its own data
 and were removed once nothing called them — the queries live on as plain
-functions in `app/routers/tesla.py`, called by `get_dashboard()`.
+functions in `app/tesla.py`, called by `get_dashboard()`.
 
 ### Public
 

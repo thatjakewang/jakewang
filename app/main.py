@@ -1,11 +1,13 @@
 """Main FastAPI application entrypoint.
 
 Serves the whole site from one origin: the HTML pages (Jinja templates in
-templates/, assets in static/) and the JSON API the dashboard fetches from
-(/api/tesla/*). Same-origin means no CORS is involved at all.
+templates/, assets in static/) and the write-only API at /api/tesla/*, which
+exists for iPhone Shortcuts. Same-origin means no CORS is involved at all.
 
-The real business logic lives in the routers; the page routes below only
-pick a template — every number on the dashboard is fetched client-side.
+Assembly lives here — middleware, cache policy, the rate limiter, error pages,
+and the page routes. The queries are in app/tesla.py: /mytesla/ calls
+get_dashboard() and hands the result straight to the template, so the numbers
+are rendered into the HTML rather than fetched by the browser.
 """
 
 from datetime import timedelta
@@ -14,21 +16,20 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
-from slowapi import _rate_limit_exceeded_handler
+from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
 from app.database import get_db
-from app.limiter import limiter
-from app.routers import tesla
+from app import tesla
 
-# The Jinja environment and the rate limiter live in their own modules so the
-# routers can use them without importing this one back. static_url is re-exported
-# here because it was defined here historically.
+# The Jinja environment keeps its own module; static_url is re-exported here
+# because it was defined here historically.
 from app.templating import STATIC_DIR, static_url, templates  # noqa: F401
 
 settings = get_settings()
@@ -48,7 +49,19 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # Compress responses over 500 bytes (HTML pages and the growing JSON payloads).
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
-# Rate limiting: configured in app/limiter.py (the routers need it too).
+# Per-client-IP cap on every endpoint (in-memory — fine for a single-process
+# deployment). /health and /robots.txt are exempted at their definitions below,
+# so monitors and crawlers are never throttled. The cap covers pages and static
+# assets too, and one page load pulls fewer than 10 requests, so it sits well
+# above a browser's burst rather than at an API-only value.
+#
+# Behind a reverse proxy, uvicorn needs --proxy-headers (and
+# --forwarded-allow-ips) or get_remote_address sees the proxy for every client.
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["600/minute"],
+    headers_enabled=True,
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)

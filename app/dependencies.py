@@ -1,7 +1,8 @@
 """Shared FastAPI dependencies.
 
-Currently only contains the API key verification used by the protected
-endpoints in the Tesla router.
+Only the API key check, used by the three write endpoints in app/tesla.py. It
+sits apart from them because it is the site's single credential, not a detail
+of logging a charge — the place to look when asking "what is protected here".
 """
 
 import secrets

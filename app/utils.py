@@ -1,6 +1,6 @@
-"""Shared helpers used across routers.
+"""Query and response helpers, used by app/tesla.py.
 
-Keeps routers thin and responses consistent:
+Keeps the endpoints thin and their responses consistent:
 - serialize_value / serialize_row : convert raw DB values into JSON-friendly ones
 - success_response                : standard envelope for all write (POST) endpoints
 - create_record                   : shared INSERT -> commit -> envelope flow for POST endpoints

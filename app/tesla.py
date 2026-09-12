@@ -1,10 +1,13 @@
 """Tesla cost tracking for a personal Tesla (charging + car expenses).
 
 Three protected write endpoints, used by iPhone Shortcuts, plus the read
-queries behind them. The reads are plain functions rather than routes: the
-only thing that wants them is the server-rendered dashboard, which calls
+queries behind them. The reads are plain functions rather than routes: the only
+thing that wants them is the server-rendered dashboard, which calls
 get_dashboard() directly (see app/main.py). They were HTTP endpoints while the
 page fetched its own data — nothing did after that, so the routes went.
+
+This is the only router left, so it sits beside main.py instead of in a
+package of its own.
 
 All monetary values are stored as integers and kWh as floats. The id column
 (SERIAL) provides stable ordering for the recent-record queries.

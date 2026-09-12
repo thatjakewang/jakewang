@@ -1,8 +1,9 @@
-"""The Jinja environment and the globals its templates rely on.
+"""The Jinja environment, its globals, and the filters the templates call.
 
-Lives outside app/main.py for the same reason app/limiter.py does: a router that
-renders pages (app/routers/auth.py) needs it, and main.py imports the routers —
-so the templates cannot live in main.py without a circular import.
+Kept out of app/main.py because it is a self-contained unit — how numbers are
+formatted and how asset URLs are versioned has nothing to do with wiring up an
+application. It once had to live here to avoid a circular import with the page
+routers; that constraint is gone, and this is now a choice.
 """
 
 from datetime import date
