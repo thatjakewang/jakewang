@@ -743,29 +743,7 @@ footer {
 }
 
 /* =========================================
-   9. Dashboard Error States
-   ========================================= */
-
-.dashboard-error {
-    color: #c0392b;
-    font-size: 0.9rem;
-    padding: 8px 0;
-    font-style: normal;
-}
-
-.kpi-card.error {
-    background: #fdf2f2;
-    border-color: #fecaca;
-}
-
-.kpi-card-value.error {
-    font-size: 1rem;
-    font-weight: 500;
-    color: #c0392b;
-}
-
-/* =========================================
-   10. Error Pages (404 / 500)
+   9. Error Pages (404 / 500)
    ========================================= */
 
 .error-page {
@@ -778,7 +756,7 @@ footer {
 }
 
 /* =========================================
-   11. Sign-in Page
+   10. Sign-in Page
    ========================================= */
 
 .login {

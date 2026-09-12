@@ -1,4 +1,5 @@
-{# Shared error page body — used by 404.html and 500.html (set code + message) #}
+{# The one error page. `code` and `message` come from html_error_handler in
+   app/main.py, which is the only thing that renders this. #}
 {% extends 'base.html' %}
 
 {% block title %}{{ code }} - {{ message }}{% endblock %}

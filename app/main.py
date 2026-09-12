@@ -86,6 +86,10 @@ STATIC_CACHE_MAX_AGE = int(timedelta(days=365).total_seconds())
 # same time as the route that serves it.
 PRIVATE_PATH_PREFIXES = ("/login", "/logout")
 
+# Status codes that get the HTML error page, and the line it shows. Anything
+# not listed here stays JSON, whatever the client is.
+ERROR_PAGES = {404: "Page Not Found", 500: "Internal Server Error"}
+
 
 def is_private_path(path: str) -> bool:
     """True for paths served only to a logged-in user (never publicly cacheable)."""
@@ -152,12 +156,14 @@ async def html_error_handler(request: Request, exc: StarletteHTTPException):
     Without this, a mistyped URL would return FastAPI's bare JSON detail
     instead of the site's 404 page.
     """
-    if request.url.path.startswith("/api/") or exc.status_code not in (404, 500):
+    if request.url.path.startswith("/api/") or exc.status_code not in ERROR_PAGES:
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
-    template = "404.html" if exc.status_code == 404 else "500.html"
     return templates.TemplateResponse(
-        request=request, name=template, status_code=exc.status_code
+        request=request,
+        name="error.html",
+        status_code=exc.status_code,
+        context={"code": exc.status_code, "message": ERROR_PAGES[exc.status_code]},
     )
 
 

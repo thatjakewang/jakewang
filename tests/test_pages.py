@@ -143,6 +143,11 @@ class TestErrorPages:
         assert response.status_code == 404
         assert response.headers["content-type"].startswith("text/html")
         assert "</html>" in response.text
+        # One template serves every error page, so the code and its line come
+        # from the handler's context — a broken context renders a blank page
+        # that still looks like valid HTML.
+        assert "<h1>404</h1>" in response.text
+        assert "Page Not Found" in response.text
 
     def test_unknown_api_path_stays_json(self, client):
         """API clients (iPhone Shortcuts) must not get an HTML error page."""
