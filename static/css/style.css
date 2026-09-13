@@ -15,7 +15,6 @@
     --link-color: #c2410c;      /* accessible orange */
     --link-hover: #9a3412;
     --border-color: #eeeeee;    /* divider */
-    --code-bg: #f6f8fa;         /* code block background */
     --code-border: #e1e4e8;
     --muted-color: #666666;     /* subtitles, quotes */
     --meta-color: #707070;      /* dates, footer text */
@@ -515,16 +514,12 @@ footer {
     margin-bottom: 20px;
 }
 
-/* KPI grid — 4 cols default, .cols-3 for 6-cell layouts (e.g. Tesla) */
+/* KPI grid — three columns on desktop, two on mobile. */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     margin-bottom: 14px;
-}
-
-.kpi-grid.cols-3 {
-    grid-template-columns: repeat(3, 1fr);
 }
 
 .kpi-card {
@@ -563,11 +558,6 @@ footer {
     font-style: italic;
     margin-top: 6px;
     margin-bottom: 30px;
-}
-
-.dashboard-meta a {
-    color: var(--link-color);
-    font-style: normal;
 }
 
 .data-updated {
@@ -724,8 +714,7 @@ footer {
 
 /* Responsive */
 @media (max-width: 720px) {
-    .kpi-grid,
-    .kpi-grid.cols-3 {
+    .kpi-grid {
         grid-template-columns: repeat(2, 1fr);
     }
     .dashboard-table {

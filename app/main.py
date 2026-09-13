@@ -230,7 +230,7 @@ def tesla_dashboard(
     """Tesla cost dashboard, rendered server-side in one DB session.
 
     tesla.get_dashboard() resolves every widget from one session, so the whole
-    page costs nine queries and no HTTP round trip. An unknown ?period falls
+    page costs seven or eight queries and no HTTP round trip. An unknown ?period falls
     back to the current month rather than 404ing: it is a display toggle, not a
     resource.
     """
@@ -242,7 +242,7 @@ def tesla_dashboard(
         context={
             "meta_title": "Tesla Cost Tracker – Jake Wang",
             "period_key": period,
-            **tesla.get_dashboard(db),
+            **tesla.get_dashboard(db, period),
         },
     )
 

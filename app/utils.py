@@ -61,7 +61,7 @@ def create_record(db: Session, insert_sql: str, payload: BaseModel, message: str
 
     return success_response(
         message,
-        {**serialize_row(returned), **{key: serialize_value(value) for key, value in fields.items()}},
+        {**serialize_row(returned), **serialize_row(fields)},
     )
 
 

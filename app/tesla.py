@@ -122,8 +122,8 @@ def get_data_coverage(db: Session):
     return serialize_row(row)
 
 
-def get_period_summary(db: Session):
-    """Summarize this month, the previous month, and the trailing 90 days.
+def get_period_summary(db: Session, period: str):
+    """Summarize the selected period, including the prior month for MTD comparison.
 
     Distance is measured between the last odometer reading before a period and
     the last reading within it. It is null when either boundary is unavailable.
@@ -158,6 +158,8 @@ def get_period_summary(db: Session):
              ORDER BY reading_date DESC, id DESC LIMIT 1) AS starting_odometer
     """)
     for key, start, end in periods:
+        if key != period and not (period == "current_month" and key == "previous_month"):
+            continue
         row = db.execute(
             query, {"start_date": start, "end_date": end}
         ).mappings().one()
@@ -184,6 +186,8 @@ def get_period_summary(db: Session):
             "total_cost_per_km": round(total_cost / km, 2) if km else None,
             "kwh_per_100km": round(energy_kwh / km * 100, 1) if km else None,
         }
+    if period != "current_month":
+        return result
     current = result["current_month"]
     previous = result["previous_month"]
     current["cost_per_km_change_pct"] = (
@@ -232,8 +236,8 @@ def get_recent_car_expenses(db: Session):
     return fetch_recent(db, "car_expenses", "date, item, amount")
 
 
-def get_dashboard(db: Session):
-    """Return every number the dashboard shows, from one session: nine queries.
+def get_dashboard(db: Session, period: str):
+    """Return dashboard data in eight queries for MTD, seven for trailing 90 days.
 
     The page used to fetch this over HTTP, one request per widget before that.
     Now app/main.py calls it directly while rendering, so the whole dashboard
@@ -246,7 +250,7 @@ def get_dashboard(db: Session):
     return {
         "stats": get_stats(db),
         "data_coverage": get_data_coverage(db),
-        "period_summary": get_period_summary(db),
+        "period_summary": get_period_summary(db, period),
         "charging_providers": get_charging_by_provider(db),
         "recent_charging": get_recent_charging_records(db),
         "recent_expenses": get_recent_car_expenses(db),

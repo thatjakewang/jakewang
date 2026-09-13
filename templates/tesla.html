@@ -7,8 +7,8 @@
 
 {# KPI card grid: cards is a list of (label, value, meta) triples. Local to
    this template — the dashboard is the only page that has ever used it. #}
-{% macro kpi_grid(cards, grid_class='') %}
-<div class="kpi-grid{% if grid_class %} {{ grid_class }}{% endif %}">
+{% macro kpi_grid(cards) %}
+<div class="kpi-grid">
     {% for label, value, meta in cards %}
     <div class="kpi-card">
         <div class="kpi-card-label">{{ label }}</div>
@@ -38,7 +38,7 @@
         ("Charging Cost", stats.charging_cost | money, "all-time"),
         ("Other Costs", stats.non_charging_cost | money, "all-time"),
         ("Avg Price", stats.avg_price_per_kwh | money, "effective NTD / kWh"),
-    ], "cols-3") }}
+    ]) }}
     <p class="dashboard-note">All-time per-km figures use the current odometer as the denominator.</p>
 </section>
 
@@ -50,8 +50,7 @@
             <h2 class="dashboard-section-title">Period Performance</h2>
             <p class="dashboard-meta">{{ period.start_date }} to {{ period.end_date }}{% if period.is_partial %} · partial period{% endif %}</p>
         </div>
-        {# Links, not buttons: switching periods is a page load now, and the
-           payload for both already came back in the same query. #}
+        {# Switching periods loads a page with data for the selected period. #}
         <div class="period-tabs" role="group" aria-label="Performance period">
             <a class="period-tab{% if period_key == 'current_month' %} is-active{% endif %}"
                href="/mytesla/">This month</a>
@@ -68,7 +67,7 @@
         ("vs. Prior Month",
          "Not comparable" if change is none else "%s%s%%" | format("+" if change > 0 else "", change),
          "comparable cost / km"),
-    ], "cols-3") }}
+    ]) }}
     <p class="dashboard-note">Charged energy may not be consumed in the same period; the 90-day view reduces timing noise.</p>
 </section>
 

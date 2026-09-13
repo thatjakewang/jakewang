@@ -51,7 +51,8 @@ schema.sql         # reference DDL for rebuilding the database
 ```
 
 The dashboard is rendered server-side: `/mytesla/` calls `get_dashboard()`,
-which resolves all nine queries in one session, and Jinja prints the numbers
+which resolves eight queries for this month or seven for the trailing 90 days
+in one session, and Jinja prints the numbers
 straight into the HTML. The page
 ships no JavaScript of its own — the only script on the site is
 `static/js/nav.js` for the mobile menu. Nothing needs a redeploy when new
@@ -60,7 +61,7 @@ and tables only.
 
 The period switch (`This month` / `Last 90 days`) is a link to
 `?period=trailing_90_days`, not a client-side toggle: `get_period_summary()`
-already returns both windows in the same query.
+queries only the selected window, plus the prior month when needed for comparison.
 
 ## Environment Variables
 
