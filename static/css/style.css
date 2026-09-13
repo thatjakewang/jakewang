@@ -21,6 +21,8 @@
     --meta-color: #707070;      /* dates, footer text */
     --subtle-bg: #fafafa;       /* zebra rows, hover/card backgrounds */
     --mono-font: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+    --container-width: 740px;
+    --container-gutter: 20px;
 }
 
 /* =========================================
@@ -51,9 +53,9 @@ a:hover {
    3. Layout
    ========================================= */
 .container {
-    max-width: 740px; /* optimal reading width */
+    max-width: var(--container-width); /* optimal reading width */
     margin: 0 auto;
-    padding: 36px 20px 40px;
+    padding: 36px var(--container-gutter) 40px;
 }
 
 /* =========================================
@@ -78,11 +80,10 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 48px; /* space between logo and nav */
-    max-width: 1100px;
+    max-width: var(--container-width);
     margin: 0 auto;
-    padding: 14px 24px;
+    padding: 14px var(--container-gutter);
     min-height: 56px;
-    box-sizing: border-box;
 }
 
 .logo {
@@ -226,7 +227,7 @@ body.nav-open {
 @media (max-width: 720px) {
     .site-header-inner {
         gap: 12px;
-        padding: 10px 16px;
+        padding: 10px var(--container-gutter);
         min-height: 52px;
         /* Top bar only; the panel is laid out separately when open */
         flex-wrap: nowrap;
