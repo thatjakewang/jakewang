@@ -1,5 +1,5 @@
-{# The one error page. `code` and `message` come from html_error_handler in
-   app/main.py, which is the only thing that renders this. #}
+{# Shared error page. `code` and `message` come from the error handlers
+   in app/main.py. #}
 {% extends 'base.html' %}
 
 {% block title %}{{ code }} - {{ message }}{% endblock %}

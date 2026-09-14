@@ -10,6 +10,7 @@ get_dashboard() and hands the result straight to the template, so the numbers
 are rendered into the HTML rather than fetched by the browser.
 """
 
+import logging
 from datetime import timedelta
 
 from fastapi import Depends, FastAPI, Request
@@ -28,6 +29,8 @@ from app.database import get_db
 from app import tesla
 
 from app.templating import STATIC_DIR, templates
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Jake Wang",
@@ -136,6 +139,31 @@ async def html_error_handler(request: Request, exc: StarletteHTTPException):
         name="error.html",
         status_code=exc.status_code,
         context={"code": exc.status_code, "message": ERROR_PAGES[exc.status_code]},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_error_handler(request: Request, exc: Exception):
+    """Log unexpected failures and return a generic error without internal details."""
+    logger.error(
+        "Unhandled error on %s %s",
+        request.method,
+        request.url.path,
+        exc_info=(type(exc), exc, exc.__traceback__),
+    )
+    headers = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"}
+    if request.url.path.startswith("/api/"):
+        return JSONResponse(
+            status_code=500,
+            content={"detail": ERROR_PAGES[500]},
+            headers=headers,
+        )
+    return templates.TemplateResponse(
+        request=request,
+        name="error.html",
+        status_code=500,
+        context={"code": 500, "message": ERROR_PAGES[500]},
+        headers=headers,
     )
 
 

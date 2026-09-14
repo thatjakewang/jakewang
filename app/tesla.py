@@ -15,9 +15,10 @@ All monetary values are stored as integers and kWh as floats. The id column
 
 from calendar import monthrange
 from datetime import date, timedelta
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -28,20 +29,21 @@ from app.utils import create_record, fetch_recent, get_today, serialize_row
 
 router = APIRouter()
 settings = get_settings()
+RecordLabel = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 
 
 class ChargingRecordCreate(BaseModel):
     """Payload for creating a charging record (Tesla Supercharger, etc.)."""
     charge_date: date
-    provider: str = Field(min_length=1, max_length=100)
+    provider: RecordLabel
     amount: int = Field(ge=0)
-    kwh: float = Field(ge=0)
+    kwh: float = Field(ge=0, allow_inf_nan=False)
 
 
 class CarExpenseCreate(BaseModel):
     """Payload for recording a car-related expense (insurance, maintenance, etc.)."""
     date: date
-    item: str = Field(min_length=1, max_length=100)
+    item: RecordLabel
     amount: int = Field(ge=0)
 
 
@@ -74,8 +76,9 @@ def get_stats(db: Session):
     totals_query = text("""
         SELECT
             (SELECT COALESCE(SUM(amount), 0) FROM car_expenses) AS car_expense_total,
-            (SELECT COALESCE(SUM(amount), 0) FROM charging_records) AS charging_cost,
-            (SELECT COALESCE(SUM(kwh), 0) FROM charging_records) AS energy_kwh
+            COALESCE(SUM(amount), 0) AS charging_cost,
+            COALESCE(SUM(kwh), 0) AS energy_kwh
+        FROM charging_records
     """)
 
     totals = db.execute(totals_query).mappings().one()
@@ -144,10 +147,8 @@ def get_period_summary(db: Session, period: str):
     result = {}
     query = text("""
         SELECT
-            COALESCE((SELECT SUM(amount) FROM charging_records
-                      WHERE charge_date BETWEEN :start_date AND :end_date), 0) AS charging_cost,
-            COALESCE((SELECT SUM(kwh) FROM charging_records
-                      WHERE charge_date BETWEEN :start_date AND :end_date), 0) AS energy_kwh,
+            COALESCE(SUM(amount), 0) AS charging_cost,
+            COALESCE(SUM(kwh), 0) AS energy_kwh,
             COALESCE((SELECT SUM(amount) FROM car_expenses
                       WHERE date BETWEEN :start_date AND :end_date), 0) AS non_charging_cost,
             (SELECT reading_km FROM odometer_readings
@@ -156,6 +157,8 @@ def get_period_summary(db: Session, period: str):
             (SELECT reading_km FROM odometer_readings
              WHERE reading_date < :start_date
              ORDER BY reading_date DESC, id DESC LIMIT 1) AS starting_odometer
+        FROM charging_records
+        WHERE charge_date BETWEEN :start_date AND :end_date
     """)
     for key, start, end in periods:
         if key != period and not (period == "current_month" and key == "previous_month"):
@@ -191,9 +194,12 @@ def get_period_summary(db: Session, period: str):
     current = result["current_month"]
     previous = result["previous_month"]
     current["cost_per_km_change_pct"] = (
-        round((current["total_cost_per_km"] / previous["total_cost_per_km"] - 1) * 100, 1)
-        if current["total_cost_per_km"] is not None
-        and previous["total_cost_per_km"] not in (None, 0)
+        round((
+            (current["total_cost"] / current["km_driven"])
+            / (previous["total_cost"] / previous["km_driven"]) - 1
+        ) * 100, 1)
+        if current["km_driven"] and previous["km_driven"]
+        and previous["total_cost"] != 0
         else None
     )
     return result
