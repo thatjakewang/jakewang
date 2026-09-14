@@ -8,8 +8,8 @@
 -- Notes:
 -- - Required fields are NOT NULL and numeric measurements must be non-negative,
 --   matching the validation performed by the API.
--- - created_at is not read by the API (kept for auditing); /recent ordering
---   uses the record's date column + id instead.
+-- - created_at is not read by the API (kept for auditing); the dashboard's
+--   recent-record queries order by the record's date column + id instead.
 
 CREATE TABLE IF NOT EXISTS charging_records (
     id SERIAL PRIMARY KEY,

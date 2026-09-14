@@ -47,18 +47,25 @@ def _format_number(value: float | int) -> str:
     return f"{value:,}"
 
 
-def number(value, fallback: str = "Not enough data", suffix: str = "") -> str:
-    """Render a metric, or the fallback text when the API left it null.
+# What a null metric renders as. Nulls are meaningful here: a month with no
+# odometer delta has no cost per km, and saying so beats printing a zero that
+# looks like a real measurement.
+NO_DATA = "Not enough data"
 
-    Nulls are meaningful here: a month with no odometer delta has no cost per
-    km, and saying so beats printing a zero that looks like a real measurement.
+
+def number(value, suffix: str = "") -> str:
+    """Render a metric, or NO_DATA when the query left it null.
+
+    No fallback parameter: every unitless metric on the dashboard means the
+    same thing by a null. money() takes one because a provider with no paid
+    sessions wants to say that, not "not enough data".
     """
     if value is None:
-        return fallback
+        return NO_DATA
     return f"{_format_number(value)}{suffix}"
 
 
-def money(value, fallback: str = "Not enough data", suffix: str = "") -> str:
+def money(value, fallback: str = NO_DATA, suffix: str = "") -> str:
     """Same, prefixed with the currency these tables are all denominated in."""
     if value is None:
         return fallback

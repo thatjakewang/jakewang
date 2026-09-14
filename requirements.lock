@@ -35,9 +35,7 @@ pydantic-core==2.46.4
 pydantic-settings==2.14.2
     # via -r requirements.txt
 python-dotenv==1.2.2
-    # via
-    #   -r requirements.txt
-    #   pydantic-settings
+    # via pydantic-settings
 slowapi==0.1.9
     # via -r requirements.txt
 sqlalchemy==2.0.49

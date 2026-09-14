@@ -2,9 +2,8 @@
 
 Keeps the endpoints thin and their responses consistent:
 - serialize_value / serialize_row : convert raw DB values into JSON-friendly ones
-- success_response                : standard envelope for all write (POST) endpoints
 - create_record                   : shared INSERT -> commit -> envelope flow for POST endpoints
-- fetch_recent                    : shared "10 most recent rows" query for /recent endpoints
+- fetch_recent                    : shared "10 most recent rows" query for the dashboard tables
 - get_today                       : timezone-aware "today" helper
 """
 
@@ -42,8 +41,11 @@ def serialize_row(row) -> dict:
     return {key: serialize_value(value) for key, value in row.items()}
 
 
-def success_response(message: str, data: dict) -> dict:
-    """Standard success envelope returned by all write (POST) endpoints."""
+def _success_response(message: str, data: dict) -> dict:
+    """Standard success envelope returned by all write (POST) endpoints.
+
+    Private: every endpoint reaches it through create_record below.
+    """
     return {"status": "success", "message": message, "data": data}
 
 
@@ -59,7 +61,7 @@ def create_record(db: Session, insert_sql: str, payload: BaseModel, message: str
     returned = db.execute(text(insert_sql), fields).mappings().one()
     db.commit()
 
-    return success_response(
+    return _success_response(
         message,
         {**serialize_row(returned), **serialize_row(fields)},
     )
@@ -68,10 +70,10 @@ def create_record(db: Session, insert_sql: str, payload: BaseModel, message: str
 def fetch_recent(db: Session, table: str, columns: str, order_col: str = "date") -> list[dict]:
     """Return the 10 most recent rows of a table (newest first), JSON-ready.
 
-    All /recent endpoints share this exact shape: order by the record's date
-    column, then id (SERIAL, so insertion order) as the tie-breaker. `table` / `columns` /
-    `order_col` are hardcoded by callers (never user input), so building the
-    SQL with an f-string is safe here.
+    Both recent-record tables on the dashboard share this exact shape: order by
+    the record's date column, then id (SERIAL, so insertion order) as the
+    tie-breaker. `table` / `columns` / `order_col` are hardcoded by callers
+    (never user input), so building the SQL with an f-string is safe here.
     """
     rows = db.execute(text(f"""
         SELECT {columns}

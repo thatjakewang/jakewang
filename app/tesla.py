@@ -126,7 +126,11 @@ def get_data_coverage(db: Session):
 
 
 def get_period_summary(db: Session, period: str):
-    """Summarize the selected period, including the prior month for MTD comparison.
+    """Summarize the selected period, keyed by period name.
+
+    The current-month view also queries the prior month, but only to derive
+    cost_per_km_change_pct — that row is dropped before returning, so the
+    result holds exactly the period the caller asked for.
 
     Distance is measured between the last odometer reading before a period and
     the last reading within it. It is null when either boundary is unavailable.
@@ -192,7 +196,8 @@ def get_period_summary(db: Session, period: str):
     if period != "current_month":
         return result
     current = result["current_month"]
-    previous = result["previous_month"]
+    # Only the comparison survives; the template never reads the prior month.
+    previous = result.pop("previous_month")
     current["cost_per_km_change_pct"] = (
         round((
             (current["total_cost"] / current["km_driven"])
@@ -315,8 +320,8 @@ def create_odometer_reading(
 ):
     """Log a total-odometer reading (protected by x-api-key).
 
-    reading_km is the cumulative number shown on the Tesla screen; cost-per-km
-    in /stats automatically follows the latest reading.
+    reading_km is the cumulative number shown on the Tesla screen; the
+    dashboard's cost-per-km automatically follows the latest reading.
     """
     return create_record(
         db,
