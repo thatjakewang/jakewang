@@ -42,6 +42,8 @@
 
             <div class="site-header-panel" id="site-nav-panel">
                 <nav class="site-nav" aria-label="Main">
+                    <a href="/summaries/"
+                       class="nav-link{% if request.url.path.startswith('/summaries/') %} is-active{% endif %}">Summaries</a>
                     <a href="/mytesla/"
                        class="nav-link{% if request.url.path == '/mytesla/' %} is-active{% endif %}">MyTesla</a>
                 </nav>
