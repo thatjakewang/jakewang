@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="post-page">
+    <a href="{{ category_url }}" lang="zh-Hant">← {{ category_label }}</a>
+    <p class="post-meta"><time datetime="{{ post.date.isoformat() }}">{{ post.date.isoformat() }}</time></p>
+    {% if not post.has_title %}<h1>{{ post.title }}</h1>{% endif %}
+    {% if post.authors %}<p class="post-meta">Authors: {{ post.authors | join(', ') }}</p>{% endif %}
+    {% if post.venue %}<p class="post-meta">Venue: {{ post.venue }}</p>{% endif %}
+    {% if post.doi %}<p class="post-meta">DOI: {{ post.doi }}</p>{% endif %}
+    <div class="post-content">{{ post.html }}</div>
+</article>
+{% endblock %}

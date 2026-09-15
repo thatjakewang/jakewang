@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.database import get_db
-from app import tesla
+from app import posts, tesla
 
 from app.templating import STATIC_DIR, templates
 
@@ -277,3 +277,4 @@ def tesla_dashboard(
 
 # Tesla cost tracking (public stats + protected writes for charging/car expenses)
 app.include_router(tesla.router, prefix="/api/tesla", tags=["Tesla"])
+posts.register_routes(app)

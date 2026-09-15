@@ -5,6 +5,45 @@
    block. Mobile breakpoints sit next to the components they adjust rather
    than in a separate responsive section. */
 
+/* Markdown articles and category lists */
+.post-list { list-style: none; padding: 0; }
+.post-list li { padding: 24px 0; border-bottom: 1px solid var(--border-color); }
+.post-list h2 { margin: 8px 0 0; font-size: 1.25rem; }
+.post-meta, .post-list time { color: var(--meta-color); font-size: 0.9rem; }
+.post-page, .post-list { overflow-wrap: anywhere; }
+.post-content h2 { margin-top: 2.5rem; }
+.post-content h3 { margin-top: 1.75rem; }
+.post-content blockquote {
+    margin: 1.5rem 0;
+    padding: 0.25rem 1.25rem;
+    border-left: 3px solid var(--link-color);
+    color: var(--muted-color);
+}
+.post-content pre {
+    overflow-x: auto;
+    padding: 16px;
+    border: 1px solid var(--code-border);
+    border-radius: 6px;
+    background: var(--subtle-bg);
+    line-height: 1.5;
+}
+.post-content code { font-family: var(--mono-font); font-size: 0.9em; }
+.post-content table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.95rem;
+}
+.post-content th, .post-content td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+.post-content th { background: var(--subtle-bg); }
+.post-content img { max-width: 100%; height: auto; }
+.post-content hr { border: 0; border-top: 1px solid var(--border-color); margin: 2rem 0; }
+
 /* =========================================
    1. CSS Variables
    ========================================= */
