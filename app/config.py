@@ -1,7 +1,7 @@
 """Application configuration (pydantic-settings).
 
-All runtime configuration (DB connection, API key, timezone, odometer reading)
-is defined here and loaded from .env or environment variables.
+All runtime configuration (DB connection, API key, timezone) is defined here and
+loaded from .env or environment variables.
 """
 
 from functools import lru_cache
@@ -12,8 +12,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application configuration loaded from environment variables or .env file.
 
-    Sensitive values (keys) and deployment-specific values (DB URL, odometer) are
-    kept out of source control. Pydantic-settings automatically validates types.
+    Sensitive values (keys) and deployment-specific values (DB URL) are kept out of
+    source control. Pydantic-settings automatically validates types.
     """
 
     # No defaults: a deployment that forgot either of these fails to boot
@@ -22,7 +22,6 @@ class Settings(BaseSettings):
     shortcut_api_key: str
 
     app_timezone: str = "Asia/Taipei"
-    tesla_odometer_km: int = 22937
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

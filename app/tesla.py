@@ -22,13 +22,11 @@ from pydantic import BaseModel, Field, StringConstraints
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
 from app.database import get_db
 from app.dependencies import verify_shortcut_api_key
 from app.utils import create_record, fetch_recent, get_today, serialize_row
 
 router = APIRouter()
-settings = get_settings()
 RecordLabel = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 
 
@@ -56,14 +54,14 @@ class OdometerReadingCreate(BaseModel):
 
 
 def get_latest_odometer(db: Session) -> int:
-    """Return the most recent odometer reading, or the config seed if none exist yet."""
+    """Return the most recent odometer reading, or 0 if none have been logged yet."""
     reading = db.execute(text("""
         SELECT reading_km
         FROM odometer_readings
         ORDER BY reading_date DESC, id DESC
         LIMIT 1
     """)).scalar()
-    return int(reading) if reading is not None else settings.tesla_odometer_km
+    return int(reading) if reading is not None else 0
 
 
 def get_stats(db: Session):

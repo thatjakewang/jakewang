@@ -71,12 +71,11 @@ All configuration is loaded via `pydantic-settings` from `.env` (or environment 
 DATABASE_URL=postgresql://user:password@host:port/dbname
 SHORTCUT_API_KEY=your_api_key
 APP_TIMEZONE=Asia/Taipei
-TESLA_ODOMETER_KM=21471
 ```
 
 `DATABASE_URL` and `SHORTCUT_API_KEY` have no defaults — a deployment that
 forgot either fails to boot instead of running against the wrong database or
-an open write API. The other two fall back to the values above.
+an open write API. `APP_TIMEZONE` falls back to the value above.
 
 ## Setup & Run
 
