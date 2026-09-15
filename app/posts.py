@@ -23,7 +23,7 @@ from app.templating import BASE_DIR, templates
 
 logger = logging.getLogger(__name__)
 POSTS_DIR = BASE_DIR / "posts"
-CATEGORIES = {"summaries": "ML 論文心得"}
+CATEGORIES = {"summaries": "Paper Summaries"}
 SEGMENT = re.compile(r"[\w]+(?:-[\w]+)*", re.UNICODE)
 
 
