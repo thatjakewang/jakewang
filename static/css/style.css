@@ -8,9 +8,11 @@
 /* Markdown articles and category lists */
 .post-list { list-style: none; padding: 0; }
 .post-list li { padding: 24px 0; border-bottom: 1px solid var(--border-color); }
-.post-list h2 { margin: 8px 0 0; font-size: 1.25rem; }
+.post-list h2 { margin: 8px 0 0; font-size: 1rem; font-weight: normal; }
+.post-list h2 a { color: #337ab7;}
 .post-meta, .post-list time { color: var(--meta-color); font-size: 0.9rem; }
 .post-page, .post-list { overflow-wrap: anywhere; }
+.post-content h2 { font-size: 2.2rem;}
 .post-content h2 { margin-top: 2.5rem; }
 .post-content h3 { margin-top: 1.75rem; }
 .post-content blockquote {
