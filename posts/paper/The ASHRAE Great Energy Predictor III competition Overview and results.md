@@ -25,226 +25,35 @@ venue: "Science and Technology for the Built Environment, 2020"
 **DOI:** 10.1080/23744731.2020.1795514
 
 ## Paper Summary
+In late 2019, ASHRAE hosted the Great Energy Predictor III (GEPIII) machine learning competition on Kaggle, the third energy prediction competition from ASHRAE and the first since the mid-1990s. Competitors received over 20 million points of training data from 2,380 energy meters across 1,448 buildings from 16 sources, and were evaluated on more than 41 million public and private test observations. The competition attracted 4,370 participants across 3,614 teams from 94 countries, who submitted 39,403 predictions. This paper documents the competition design, dataset, winning workflows, and lessons learned.
 
-The ASHRAE Great Energy Predictor III (GEPIII) competition was a large-scale machine-learning benchmark for building energy prediction. The competition provided more than 20 million training observations from 2,380 energy meters across 1,448 buildings and evaluated predictions on more than 41 million public and private test observations.
-
-The paper summarizes the competition design, dataset, winning workflows, shared notebooks, and lessons learned. One of the most important findings is that forecasting performance depended on the entire workflow rather than on model selection alone. In particular, preprocessing emerged as a key differentiator among high-performing solutions.
-
-The competition dataset is also directly relevant to my research because Building Data Genome Project 2 (BDG2) extends the public GEPIII data with additional buildings. This makes the competition a useful reference for both data preparation and experimental design in my chilled-water demand forecasting study.
-
-## Why I Chose This Paper
-
-I chose this paper for three main reasons.
-
-### 1. Dataset Relevance
-
-BDG2 extends the public GEPIII data, so the competition is closely connected to the dataset used in my research.
-
-### 2. EDA and Preprocessing Reference
-
-The competition intentionally applied only minimal initial cleaning so that participants had to deal with real-world data-quality issues themselves. This makes the winning solutions useful references for visualization-based EDA, anomaly detection, missing-value handling, zero-value screening, and time alignment.
-
-### 3. Experimental Design Reference
-
-The competition used a temporal split:
-
-- **2016:** training data
-- **2017:** public test/validation data
-- **2018:** private test data
-
-It also used **RMSLE** as the evaluation metric. RMSLE reduces the dominance of high-consumption meters, which is relevant to a global-model setting where buildings may have very different cooling-demand scales.
-
-For my study, I plan to test RMSLE as an additional evaluation metric rather than relying on it alone.
+The most accurate solutions used large ensembles of gradient boosting tree models, particularly LightGBM, rather than any single novel architecture. The more important finding is that forecasting performance depended on the entire workflow rather than on model selection alone: as in the first ASHRAE competition, preprocessing of the data sets emerged as the key differentiator among high-performing solutions. Beyond the top five winning workflows, competitors publicly shared 415 reproducible notebooks, including over 40 additional full solutions.
 
 ## Three Important Things
+### 1. Visualization-Based EDA Should Precede Modeling
 
-### 1. Visualization-Based EDA Should Come Before Modeling
+The competition organizers intentionally applied only minimal initial cleaning, so participants had to confront real-world data-quality issues themselves. This design choice makes the winning solutions useful references for anomaly detection, missing-value handling, zero-value screening, and time alignment, because each team had to decide what counted as a defect before it could be removed.
 
-One of the useful lessons from GEPIII is that data problems are often easier to identify visually than through summary statistics alone.
-
-The second-place team manually inspected meter data using visualization and removed abnormal behavior before model training. This shows that EDA is not just a reporting step; it can directly influence preprocessing decisions.
-
-For my own work, I want to use visualizations at the beginning of the pipeline to understand:
-
-- building-type distributions
-- floor-area distributions
-- missing values
-- zero periods
-- constant-value periods
-- abnormal peaks
-- differences among buildings and sites
+A recurring lesson is that data problems are often easier to identify visually than through summary statistics alone. The second-place team manually inspected meter data using visual analytics and removed abnormal behavior before model training. This shows that exploratory data analysis is not merely a reporting step that precedes the real work; it directly determines which preprocessing decisions are made.
 
 ### 2. Preprocessing Is Part of the Modeling Workflow
 
-The winning teams used different preprocessing strategies:
+The five winning teams converged on the importance of preprocessing but diverged on method. The first-place solution removed meter anomalies, imputed missing weather values, and corrected time zones; the second place relied on visual analytics and manual inspection; the third removed zero values occurring in the same period and site; the fourth deleted outliers during training; and the fifth removed long constant-value streaks and zero target values.
 
-| Rank | Main preprocessing strategy |
-| --- | --- |
-| 1st | Removed meter anomalies, imputed missing weather values, corrected time zones |
-| 2nd | Visual analytics and manual inspection |
-| 3rd | Removed zero values occurring in the same period and site |
-| 4th | Deleted outliers during training |
-| 5th | Removed long constant-value streaks and zero target values |
+The lesson is not that any one of these rules should be copied directly, but that data quality must be treated as a component of the forecasting workflow rather than a preliminary chore. This matters especially for chilled-water data, where a zero value may indicate either a genuine system shutdown or a data-quality defect. Zero values therefore should not be removed automatically without first checking the operating context.
 
-The important lesson is not that one of these rules should always be copied. Instead, the competition shows that data quality must be treated as part of the forecasting workflow.
+### 3. Evaluating Heterogeneous Buildings Requires Scale Awareness
 
-This is especially important for chilled-water data because a zero value may indicate either a real system shutdown or a data-quality problem. Therefore, zero values should not be removed automatically without checking the operating context.
+The competition used RMSLE as its evaluation metric, computed as the root mean square of the differences between the logarithms of predicted and actual values after adding one to each. Because the comparison happens in log space, RMSLE reduces the dominance of high-consumption meters, whereas RMSE can be driven almost entirely by large buildings since absolute errors are squared.
 
-### 3. Evaluation Across Heterogeneous Buildings Requires Scale Awareness
+This property makes RMSLE well suited to a global-model setting where buildings differ substantially in demand scale. It also compresses large absolute errors, however, so it should not serve as the only metric. RMSE and MASE still provide complementary information about absolute forecasting error and scale-independent performance respectively.
 
-RMSE can be strongly influenced by large buildings or high-consumption meters because absolute errors are squared.
+## Research gap
 
-RMSLE instead compares values after a logarithmic transformation:
+The paper reports the preprocessing strategies of successful teams but does not distill them into a reusable standard procedure, so the competition offers useful references rather than a cleaning rule that transfers to every building-energy dataset. The contribution of each individual step also remains unquantified, because the winning workflows combine preprocessing, feature engineering, model selection, ensemble modeling, and postprocessing together. The first-place solution, for instance, used anomaly removal, weather imputation, timezone correction, 28 engineered features, multiple models, and ensemble averaging; the paper shows that the complete workflow performed well without isolating how much came from each preprocessing decision.
 
-```text
-                  n
-RMSLE = sqrt( 1/n * Σ  [ log(ŷ_i + 1) - log(y_i + 1) ]^2 )
-                 i=1
-```
+A further limitation is that competition conditions differ from deployment conditions. Some winning solutions relied on public leaderboard data, complex ensembles, and competition-specific tuning, whereas an operational forecasting system must also satisfy constraints on computational cost, interpretability, maintainability, data availability, and robustness after deployment.
 
-This makes it useful when evaluating a global model across buildings with very different demand scales.
+## Research Extension
 
-However, RMSLE also compresses large absolute errors, so I do not plan to use it as the only metric. RMSE and MASE can still provide complementary information about absolute forecasting error and scale-independent performance.
-
-## Critical Review
-
-### No Single Transferable Cleaning Recipe
-
-The paper reports successful preprocessing strategies from different winning teams, but it does not define a reusable standard procedure.
-
-This means the competition provides useful references, but not a universal cleaning rule that can be directly applied to every building-energy dataset.
-
-For my research, the preprocessing rules still need to be validated specifically for chilled-water demand.
-
-### The Effect of Each Cleaning Step Is Not Isolated
-
-The winning workflows combine:
-
-- preprocessing
-- feature engineering
-- model selection
-- ensemble modeling
-- postprocessing
-
-Because these components are used together, the contribution of each individual cleaning step is not evaluated separately.
-
-For example, the first-place solution used anomaly removal, weather imputation, timezone correction, 28 engineered features, multiple models, and ensemble averaging. The paper shows that the complete workflow performed well, but it does not quantify how much improvement came from each preprocessing step.
-
-### Competition Workflows May Not Directly Transfer to Deployment
-
-Some winning solutions relied on public data, complex ensembles, and competition-specific tuning.
-
-These approaches are useful for benchmarking, but a real operational forecasting system must also consider:
-
-- computational cost
-- interpretability
-- maintainability
-- data availability
-- robustness after deployment
-
-Therefore, I treat this paper as a **workflow reference**, not as direct evidence that one particular competition solution should be deployed unchanged.
-
-## Applying This to My Research
-
-My current work focuses on the metadata of the chilled-water subset in BDG2.
-
-### Chilled-Water Building Selection
-
-The full metadata contains **1,636 buildings**.
-
-After selecting buildings with chilled-water meters:
-
-**1,636 buildings → 555 chilled-water buildings**
-
-This subset becomes the starting population for my cooling-demand forecasting study.
-
-### Primary Space Usage
-
-The chilled-water subset is dominated by education and office buildings.
-
-This indicates that the building-type distribution is imbalanced, which may influence a global model because the model will see more examples from the dominant categories.
-
-### Sub-Primary Space Usage
-
-The sub-primary space usage distribution is even more detailed and shows a clear long-tail pattern.
-
-The four largest categories are:
-
-- Office
-- College Classroom
-- College Laboratory
-- Dormitory
-
-Together, these categories account for approximately **63.4%** of the chilled-water buildings.
-
-At the same time, **101 buildings** are distributed across many low-frequency subcategories.
-
-This suggests that `sub_primaryspaceusage` may provide useful contextual information, but rare categories may need to be grouped or evaluated carefully.
-
-### Building Floor Area
-
-The building floor-area distribution is strongly right-skewed.
-
-Most buildings are relatively small, while a small number of buildings are substantially larger.
-
-This matters for global modeling because large differences in floor area may lead to large differences in cooling-demand magnitude. It also reinforces the need to use evaluation metrics that are not dominated by the largest buildings.
-
-## Current Progress
-
-The current preprocessing status is:
-
-- **Phase 1: Metadata — completed**
-- **Phase 2: Chilled-water meter data — next**
-- **Phase 3: Weather data — next**
-- **Phase 4: Data integration and final preprocessing — planned**
-
-At this stage, I would describe the work as **initial metadata screening and EDA**, rather than completed preprocessing.
-
-## Next Steps
-
-The next step is to profile the chilled-water meter data for each building.
-
-I plan to examine:
-
-- missing-data rate
-- zero-value rate
-- longest zero streak
-- constant-value periods
-- extreme values
-- distribution statistics
-- time-series patterns
-- coverage across 2016 and 2017
-
-After that, I will process the weather data, including missing values and time alignment, and then integrate metadata, chilled-water demand, and weather data into a model-ready dataset.
-
-## My Research Direction
-
-The longer-term goal is to develop a global chilled-water demand forecasting model across multiple buildings.
-
-Instead of training an independent model for every building, I want to investigate whether one forecasting model can learn from a heterogeneous portfolio of buildings while using building metadata as contextual information.
-
-The current EDA already shows two challenges that will matter later:
-
-1. **Building categories are imbalanced.**
-2. **Building sizes vary substantially.**
-
-These differences may affect how well a global model generalizes across building types and demand scales.
-
-A possible extension is to compare:
-
-- individual building models
-- one global model
-- cluster-specific models
-- a global model with cluster or building-context features
-
-The GEPIII paper does not provide a direct answer to these questions, but it provides a useful methodological lesson: **before comparing forecasting models, the data pipeline must be carefully understood, visualized, and validated.**
-
-## My Takeaway
-
-The main value of this paper for my research is not a specific winning algorithm.
-
-The most important lesson is that building-energy forecasting performance depends on the entire workflow:
-
-**EDA → Preprocessing → Feature Engineering → Modeling → Evaluation**
-
-For my BDG2 chilled-water study, this means I should first build a defensible and reproducible data-preprocessing pipeline before moving to global-model comparison.
+Building Data Genome Project 2 (BDG2) extends the public GEPIII data with additional buildings, which makes the competition a direct reference for data preparation and experimental design in a chilled-water demand forecasting study. A natural extension is to develop a global chilled-water forecasting model trained across a heterogeneous portfolio of buildings, using building metadata as contextual information, and to compare it against independent per-building models, cluster-specific models, and a global model with cluster or building-context features. Because the paper provides no reusable cleaning recipe, the preprocessing rules it documents would first need to be validated specifically for chilled water, where the meaning of a zero value is ambiguous. The methodological lesson it does offer is that before comparing forecasting models, the data pipeline must be understood, visualized, and validated.
