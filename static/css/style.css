@@ -623,16 +623,17 @@ footer {
 
 .dashboard-heading-row .dashboard-section-title {
     border: 0;
-    margin: 0 0 2px;
+    margin: 0 0 10px;
     padding: 0;
 }
 
-.dashboard-heading-row .dashboard-meta {
-    margin: 0 0 10px;
+.period-panel > .dashboard-meta {
+    margin: -8px 0 16px;
 }
 
 .period-tabs {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
     padding-bottom: 10px;
 }

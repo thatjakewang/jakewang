@@ -244,33 +244,20 @@ def home(request: Request):
     )
 
 
-# The two windows the dashboard's period switch offers, named as
-# get_period_summary() keys them.
-DASHBOARD_PERIODS = ("current_month", "trailing_90_days")
-
-
 @app.get("/mytesla/")
-def tesla_dashboard(
-    request: Request,
-    period: str = "current_month",
-    db: Session = Depends(get_db),
-):
+def tesla_dashboard(request: Request, db: Session = Depends(get_db)):
     """Tesla cost dashboard, rendered server-side in one DB session.
 
     tesla.get_dashboard() resolves every widget from one session, so the whole
-    page costs seven or eight queries and no HTTP round trip. An unknown ?period falls
-    back to the current month rather than 404ing: it is a display toggle, not a
-    resource.
+    page costs ten queries and no HTTP round trip. Every period is rendered;
+    the period switch only changes which one is shown.
     """
-    if period not in DASHBOARD_PERIODS:
-        period = DASHBOARD_PERIODS[0]
     return templates.TemplateResponse(
         request=request,
         name="tesla.html",
         context={
             "meta_title": "Tesla Cost Tracker – Jake Wang",
-            "period_key": period,
-            **tesla.get_dashboard(db, period),
+            **tesla.get_dashboard(db),
         },
     )
 

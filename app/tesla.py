@@ -123,12 +123,13 @@ def get_data_coverage(db: Session):
     return serialize_row(row)
 
 
-def get_period_summary(db: Session, period: str):
-    """Summarize the selected period, keyed by period name.
+def get_period_summary(db: Session):
+    """Summarize every period the dashboard can switch between, keyed by name.
 
-    The current-month view also queries the prior month, but only to derive
-    cost_per_km_change_pct — that row is dropped before returning, so the
-    result holds exactly the period the caller asked for.
+    All three are rendered into the page at once and the switch only toggles
+    which one is visible, so there is no ?period to choose from. The prior
+    month is also queried, but only to derive the current month's
+    cost_per_km_change_pct — that row is dropped before returning.
 
     Distance is measured between the last odometer reading before a period and
     the last reading within it. It is null when either boundary is unavailable.
@@ -145,6 +146,9 @@ def get_period_summary(db: Session, period: str):
         ("current_month", this_month, today),
         ("previous_month", previous_month, previous_comparable_end),
         ("trailing_90_days", today - timedelta(days=89), today),
+        # A full year holds every annual charge (insurance, license tax) exactly
+        # once, which shorter windows can't promise.
+        ("trailing_365_days", today - timedelta(days=364), today),
     )
     result = {}
     query = text("""
@@ -163,8 +167,6 @@ def get_period_summary(db: Session, period: str):
         WHERE charge_date BETWEEN :start_date AND :end_date
     """)
     for key, start, end in periods:
-        if key != period and not (period == "current_month" and key == "previous_month"):
-            continue
         row = db.execute(
             query, {"start_date": start, "end_date": end}
         ).mappings().one()
@@ -191,8 +193,6 @@ def get_period_summary(db: Session, period: str):
             "total_cost_per_km": round(total_cost / km, 2) if km else None,
             "kwh_per_100km": round(energy_kwh / km * 100, 1) if km else None,
         }
-    if period != "current_month":
-        return result
     current = result["current_month"]
     # Only the comparison survives; the template never reads the prior month.
     previous = result.pop("previous_month")
@@ -245,8 +245,8 @@ def get_recent_car_expenses(db: Session):
     return fetch_recent(db, "car_expenses", "date, item, amount")
 
 
-def get_dashboard(db: Session, period: str):
-    """Return dashboard data in eight queries for MTD, seven for trailing 90 days.
+def get_dashboard(db: Session):
+    """Return all dashboard data in ten queries.
 
     The page used to fetch this over HTTP, one request per widget before that.
     Now app/main.py calls it directly while rendering, so the whole dashboard
@@ -259,7 +259,7 @@ def get_dashboard(db: Session, period: str):
     return {
         "stats": get_stats(db),
         "data_coverage": get_data_coverage(db),
-        "period_summary": get_period_summary(db, period),
+        "period_summary": get_period_summary(db),
         "charging_providers": get_charging_by_provider(db),
         "recent_charging": get_recent_charging_records(db),
         "recent_expenses": get_recent_car_expenses(db),

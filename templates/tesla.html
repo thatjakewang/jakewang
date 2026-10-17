@@ -1,8 +1,9 @@
 {# Tesla cost dashboard (main.tesla_dashboard), rendered server-side.
 
    Every number below comes from get_dashboard(), resolved in one DB session
-   before this template runs. The page ships no JavaScript: what the browser
-   receives is what it displays. #}
+   before this template runs. The only JavaScript is static/js/tesla.js, which
+   switches between the Period Performance panels — all of them are already in
+   the HTML. #}
 {% extends 'base.html' %}
 
 {# KPI card grid: cards is a list of (label, value, meta) triples. Local to
@@ -42,33 +43,45 @@
     <p class="dashboard-note">All-time per-km figures use the current odometer as the denominator.</p>
 </section>
 
-{% set period = period_summary[period_key] %}
-{% set change = period.cost_per_km_change_pct if period_key == 'current_month' else none %}
+{% set periods = [
+    ("current_month", "This month"),
+    ("trailing_90_days", "Last 90 days"),
+    ("trailing_365_days", "Last 12 months"),
+] %}
 <section class="dashboard-section">
     <div class="dashboard-heading-row">
-        <div>
-            <h2 class="dashboard-section-title">Period Performance</h2>
-            <p class="dashboard-meta">{{ period.start_date }} to {{ period.end_date }}{% if period.is_partial %} · partial period{% endif %}</p>
-        </div>
-        {# Switching periods loads a page with data for the selected period. #}
+        <h2 class="dashboard-section-title">Period Performance</h2>
         <div class="period-tabs" role="group" aria-label="Performance period">
-            <a class="period-tab{% if period_key == 'current_month' %} is-active{% endif %}"
-               href="/mytesla/">This month</a>
-            <a class="period-tab{% if period_key == 'trailing_90_days' %} is-active{% endif %}"
-               href="/mytesla/?period=trailing_90_days">Last 90 days</a>
+            {% for key, label in periods %}
+            <button type="button" class="period-tab{% if loop.first %} is-active{% endif %}"
+                    data-period="{{ key }}" aria-controls="period-{{ key }}"
+                    aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ label }}</button>
+            {% endfor %}
         </div>
     </div>
-    {{ kpi_grid([
+    {% for key, label in periods %}
+    {% set period = period_summary[key] %}
+    {% set cards = [
         ("Total Cost", period.total_cost | money, "selected period"),
         ("Distance", period.km_driven | number(suffix=" km"), "odometer delta"),
         ("Energy Cost / km", period.energy_cost_per_km | money, "charging only"),
         ("Total Cost / km", period.total_cost_per_km | money, "all recorded costs"),
         ("Charged Energy", period.kwh_per_100km | number(suffix=" kWh"), "kWh / 100 km"),
+    ] %}
+    {% if key == "current_month" %}
+    {% set change = period.cost_per_km_change_pct %}
+    {% set cards = cards + [
         ("vs. Prior Month",
          "Not comparable" if change is none else "%s%s%%" | format("+" if change > 0 else "", change),
          "comparable cost / km"),
-    ]) }}
-    <p class="dashboard-note">Charged energy may not be consumed in the same period; the 90-day view reduces timing noise.</p>
+    ] %}
+    {% endif %}
+    <div class="period-panel" id="period-{{ key }}"{% if not loop.first %} hidden{% endif %}>
+        <p class="dashboard-meta">{{ period.start_date }} to {{ period.end_date }}{% if period.is_partial %} · partial period{% endif %}</p>
+        {{ kpi_grid(cards) }}
+    </div>
+    {% endfor %}
+    <p class="dashboard-note">Charged energy may not be consumed in the same period; longer views reduce timing noise, and only the 12-month view is sure to include each annual charge once.</p>
 </section>
 
 <section class="dashboard-section data-coverage" aria-labelledby="coverage-title">
@@ -166,4 +179,8 @@
         {% endif %}
     </div>
 </section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ static_url('js/tesla.js') }}"></script>
 {% endblock %}
