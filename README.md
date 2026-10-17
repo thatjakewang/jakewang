@@ -54,14 +54,16 @@ The dashboard is rendered server-side: `/mytesla/` calls `get_dashboard()`,
 which resolves eight queries for this month or seven for the trailing 90 days
 in one session, and Jinja prints the numbers
 straight into the HTML. The page
-ships no JavaScript of its own — the only script on the site is
-`static/js/nav.js` for the mobile menu. Nothing needs a redeploy when new
+ships one small script of its own, `static/js/tesla.js` for the period
+switch; the only other script on the site is `static/js/nav.js` for the
+mobile menu. Nothing needs a redeploy when new
 records land, and nothing needs a second round trip either. It is KPI figures
 and tables only.
 
-The period switch (`This month` / `Last 90 days`) is a link to
-`?period=trailing_90_days`, not a client-side toggle: `get_period_summary()`
-queries only the selected window, plus the prior month when needed for comparison.
+The period switch (`This month` / `Last 90 days` / `Last 12 months`) is a
+client-side toggle: `get_period_summary()` queries every window up front (plus
+the prior month for the comparison), all of them are rendered, and
+`static/js/tesla.js` only shows the selected one. The URL never changes.
 
 ## Environment Variables
 
