@@ -16,12 +16,20 @@ You want a button on a Kintone record form, for example one that sets a Date fie
   const SPACE_ID = 'set_today_space';
   const DATE_FIELD = 'Due_date';
 
+  const EVENTS = [
+    'app.record.create.show',
+    'app.record.edit.show',
+  ];
+
   const toDateString = (date) => {
     const pad = (n) => String(n).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    const y = date.getFullYear();
+    const m = pad(date.getMonth() + 1);
+    const d = pad(date.getDate());
+    return `${y}-${m}-${d}`;
   };
 
-  kintone.events.on(['app.record.create.show', 'app.record.edit.show'], (event) => {
+  kintone.events.on(EVENTS, (event) => {
     const space = kintone.app.record.getSpaceElement(SPACE_ID);
     if (!space || space.querySelector('button')) {
       return event;
