@@ -8,7 +8,7 @@
 /* Markdown articles and category lists */
 .post-list { list-style: none; padding: 0; }
 .post-list li { padding: 12px 0; }
-.post-list h2 { margin: 8px 0 0; font-size: 1rem; font-weight: normal; }
+.post-list h2 { margin: 8px 0 0; padding: 0; border: 0; font-size: 1rem; font-weight: normal; }
 .post-list h2 a { color: #337ab7; text-decoration: none; }
 .post-meta, .post-list time { color: var(--meta-color); font-size: 0.9rem; }
 .post-badge {
