@@ -12,10 +12,9 @@
 .post-list h2 a { color: #337ab7; text-decoration: none; }
 .post-meta, .post-list time { color: var(--meta-color); font-size: 0.9rem; }
 .post-badge {
-    margin-left: 8px; padding: 1px 8px; border: 1px solid var(--border-color); border-radius: 999px;
-    background: var(--subtle-bg); color: var(--meta-color); font-size: 0.8rem;
+    margin-left: 8px; padding: 1px 8px; border: 1px solid var(--badge-border); border-radius: 999px;
+    background: var(--badge-bg); color: var(--link-color); font-size: 0.8rem;
 }
-.post-tag { margin-left: 8px; color: var(--meta-color); font-size: 0.8rem; }
 .post-page, .post-list { overflow-wrap: anywhere; }
 .post-content h1 { font-size: 2.2rem;}
 .post-content h2 { margin-top: 2.5rem; }
@@ -89,6 +88,8 @@
     --muted-color: #666666;     /* subtitles, quotes */
     --meta-color: #707070;      /* dates, footer text */
     --subtle-bg: #fafafa;       /* zebra rows, hover/card backgrounds */
+    --badge-bg: #fff4ed;        /* category and tag labels, text in --link-color */
+    --badge-border: #fed7c3;
     --mono-font: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
     --container-width: 740px;
     --container-gutter: 20px;
