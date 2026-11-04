@@ -36,6 +36,8 @@ pydantic-core==2.46.4
     # via pydantic
 pydantic-settings==2.14.2
     # via -r requirements.txt
+pygments==2.21.0
+    # via -r requirements.txt
 python-dotenv==1.2.2
     # via pydantic-settings
 python-frontmatter==1.1.0

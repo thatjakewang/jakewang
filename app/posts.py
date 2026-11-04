@@ -23,7 +23,7 @@ from app.templating import BASE_DIR, templates
 
 logger = logging.getLogger(__name__)
 POSTS_DIR = BASE_DIR / "posts"
-CATEGORIES: dict[str, str] = {}
+CATEGORIES = {"kintone": "Kintone"}
 SEGMENT = re.compile(r"[\w]+(?:-[\w]+)*", re.UNICODE)
 
 
@@ -68,7 +68,10 @@ def _read_post(path: Path, mtime_ns: int, size: int) -> Post | None:
         for key in ("venue", "doi"):
             if not isinstance(source.get(key, ""), str):
                 raise ValueError(f"{key} must be a string")
-        html = markdown.markdown(source.content, extensions=["tables", "fenced_code"], output_format="html")
+        html = markdown.markdown(
+            source.content, extensions=["tables", "fenced_code", "codehilite"],
+            extension_configs={"codehilite": {"guess_lang": False}}, output_format="html",
+        )
         # Existing articles may already include their title and bibliographic
         # details. Keep their body intact and only supply missing header fields.
         def included(label: str) -> bool:

@@ -93,8 +93,8 @@ The site is then at **http://localhost:8000** and the API under `/api/`.
 Interactive API docs (`/docs`, `/redoc`, `/openapi.json`) are disabled on purpose —
 see `app/main.py`. Use the endpoint tables below as the reference.
 
-Dependencies: `requirements.txt` lists the eight packages this app actually
-chose; `requirements.lock` is the fully pinned set — those eight plus everything
+Dependencies: `requirements.txt` lists the ten packages this app actually
+chose; `requirements.lock` is the fully pinned set — those ten plus everything
 they pull in — and is what gets installed. Regenerate it after changing a pin:
 
 ```bash

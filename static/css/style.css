@@ -23,13 +23,33 @@
 }
 .post-content pre {
     overflow-x: auto;
-    padding: 16px;
-    border: 1px solid var(--code-border);
-    border-radius: 6px;
-    background: var(--subtle-bg);
-    line-height: 1.5;
+    padding: 1rem 1.35rem;
+    border: 1.5px solid var(--code-block-border);
+    border-radius: 0.3rem;
+    background: var(--code-block-bg);
+    color: var(--code-block-fg);
+    font-size: 0.875rem;
+    line-height: 1.65;
 }
 .post-content code { font-family: var(--mono-font); font-size: 0.9em; }
+.post-content :is(li, p) code {
+    padding: 0.2em 0.4em;
+    margin-inline: 0.1em;
+    border-radius: 2px;
+    background: var(--code-inline-bg);
+    font-size: 0.875rem;
+}
+.post-content pre code { font-size: inherit; }
+.post-content pre ::selection { background: #3392ff44; }
+
+/* Pygments token classes, colored with the GitHub Dark palette */
+.codehilite :is(.c, .c1, .cm, .ch, .cs, .cp, .cpf) { color: #6a737d; }
+.codehilite :is(.k, .kd, .kn, .kr, .kp, .kt, .o, .ow) { color: #f97583; }
+.codehilite :is(.kc, .nb, .bp, .m, .mf, .mh, .mi, .mo, .il, .no, .nv) { color: #79b8ff; }
+.codehilite :is(.nf, .fm, .nc, .na, .nd) { color: #b392f0; }
+.codehilite :is(.s, .s1, .s2, .sa, .sb, .sc, .sd, .se, .sh, .si, .sr, .ss, .sx, .dl) { color: #9ecbff; }
+.codehilite .nt { color: #85e89d; }
+.codehilite .err { color: #fdaeb7; }
 .post-content table {
     display: block;
     max-width: 100%;
@@ -57,6 +77,10 @@
     --link-hover: #9a3412;
     --border-color: #eeeeee;    /* divider */
     --code-border: #e1e4e8;
+    --code-block-bg: #212432;
+    --code-block-border: #1b1f23;
+    --code-block-fg: #e1e4e8;
+    --code-inline-bg: #f0f1f3;
     --muted-color: #666666;     /* subtitles, quotes */
     --meta-color: #707070;      /* dates, footer text */
     --subtle-bg: #fafafa;       /* zebra rows, hover/card backgrounds */
