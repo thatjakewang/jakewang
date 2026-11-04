@@ -1,7 +1,7 @@
 ---
 title: How to Apply Conditional Formatting to Kintone Fields Using JavaScript
 date: 2026-11-04
-category: kintone
+category: [kintone, javascript]
 slug: kintone-javascript-conditional-formatting
 ---
 

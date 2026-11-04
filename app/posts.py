@@ -1,7 +1,8 @@
 """Category pages for trusted, repository-owned Markdown articles.
 
 Add categories to CATEGORIES, then set title, date and category in front matter.
-An optional slug overrides the filename-derived URL. File changes invalidate
+category may be a list to show an article in several categories; the first one
+sets its URL. An optional slug overrides the filename-derived URL. File changes invalidate
 the bounded parsing cache; adding or deleting a file needs no process restart.
 """
 
@@ -32,6 +33,7 @@ class Post:
     title: str
     date: date
     category: str
+    categories: tuple[str, ...]
     slug: str
     html: Markup
     has_title: bool
@@ -49,11 +51,14 @@ def _read_post(path: Path, mtime_ns: int, size: int) -> Post | None:
     try:
         source = frontmatter.loads(path.read_text(encoding="utf-8-sig"))
         title = source.get("title")
-        category = source.get("category")
+        categories = source.get("category")
+        if isinstance(categories, str):
+            categories = [categories]
         if not isinstance(title, str) or not title.strip():
             raise ValueError("title must be a nonempty string")
-        if not isinstance(category, str) or category not in CATEGORIES:
-            raise ValueError("category must name a configured category")
+        if (not isinstance(categories, list) or not categories
+                or not all(isinstance(c, str) and c in CATEGORIES for c in categories)):
+            raise ValueError("category must name one or more configured categories")
         published = source.get("date")
         if isinstance(published, str):
             published = date.fromisoformat(published)
@@ -78,7 +83,8 @@ def _read_post(path: Path, mtime_ns: int, size: int) -> Post | None:
             return bool(re.search(rf"<strong>{label}:?</strong>", html, re.IGNORECASE))
 
         return Post(
-            title.strip(), published, category, slug, Markup(html),
+            title.strip(), published, categories[0], tuple(dict.fromkeys(categories)),
+            slug, Markup(html),
             bool(re.search(r"<h1(?:\s|>)", html)),
             () if included("Authors") else tuple(authors),
             "" if included("Venue") else source.get("venue", ""),
@@ -121,7 +127,8 @@ def _category_router(category: str, label: str) -> APIRouter:
         return templates.TemplateResponse(
             request=request, name="posts.html",
             context={"meta_title": f"{label} – Jake Wang", "category_label": label,
-                     "posts": [p for p in get_posts() if p.category == category]},
+                     "category_labels": CATEGORIES,
+                     "posts": [p for p in get_posts() if category in p.categories]},
         )
 
     @router.get("/{slug}/", response_class=HTMLResponse, name=f"{category}_detail")

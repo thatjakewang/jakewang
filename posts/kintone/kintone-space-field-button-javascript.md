@@ -1,7 +1,7 @@
 ---
 title: How to Create a Button in a Kintone Space Field Using JavaScript
 date: 2026-11-04
-category: kintone
+category: [kintone, javascript]
 slug: kintone-space-field-button-javascript
 ---
 
