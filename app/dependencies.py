@@ -22,8 +22,12 @@ def verify_shortcut_api_key(
     Uses secrets.compare_digest for constant-time comparison (timing-attack resistance).
     All protected write endpoints depend on this. The header is
     declared optional so a missing key returns 401 like an invalid one, instead of
-    FastAPI's 422 validation error.
+    FastAPI's 422 validation error. Both sides are compared as bytes: on str,
+    compare_digest raises TypeError for anything non-ASCII, which would turn a
+    garbage key into a 500.
     """
     settings = get_settings()
-    if x_api_key is None or not secrets.compare_digest(x_api_key, settings.shortcut_api_key):
+    if x_api_key is None or not secrets.compare_digest(
+        x_api_key.encode(), settings.shortcut_api_key.encode()
+    ):
         raise HTTPException(status_code=401, detail="Invalid API key")

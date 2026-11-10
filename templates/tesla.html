@@ -66,7 +66,7 @@
         ("Distance", period.km_driven | number(suffix=" km"), "odometer delta"),
         ("Energy Cost / km", period.energy_cost_per_km | money, "charging only"),
         ("Total Cost / km", period.total_cost_per_km | money, "all recorded costs"),
-        ("Charged Energy", period.kwh_per_100km | number(suffix=" kWh"), "kWh / 100 km"),
+        ("Efficiency", period.kwh_per_100km | number(suffix=" kWh"), "charged energy per 100 km"),
     ] %}
     {% if key == "current_month" %}
     {% set change = period.cost_per_km_change_pct %}
@@ -77,11 +77,11 @@
     ] %}
     {% endif %}
     <div class="period-panel" id="period-{{ key }}"{% if not loop.first %} hidden{% endif %}>
-        <p class="dashboard-meta">{{ period.start_date }} to {{ period.end_date }}{% if period.is_partial %} · partial period{% endif %}</p>
+        <p class="dashboard-meta">{{ period.start_date }} to {{ period.end_date }}{% if period.is_partial %} · partial period{% endif %}{% if period.measured_from %} · per-km figures from odometer readings {{ period.measured_from }} to {{ period.measured_to }}{% endif %}</p>
         {{ kpi_grid(cards) }}
     </div>
     {% endfor %}
-    <p class="dashboard-note">Charged energy may not be consumed in the same period; longer views reduce timing noise, and only the 12-month view is sure to include each annual charge once.</p>
+    <p class="dashboard-note">Total cost covers the calendar period; distance and the per-km figures cover the span between the odometer readings shown above. Charged energy may not be consumed in the same period; longer views reduce timing noise, and only the 12-month view is sure to include each annual charge once.</p>
 </section>
 
 <section class="dashboard-section data-coverage" aria-labelledby="coverage-title">

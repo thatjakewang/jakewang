@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="posts-page" lang="zh-Hant">
+<section class="posts-page">
     <h1>{{ category_label }}</h1>
     <ul class="post-list">
         {% for post in posts %}
@@ -11,7 +11,7 @@
             <h2><a href="{{ post.url }}">{{ post.title }}</a></h2>
         </li>
         {% else %}
-        <li>目前還沒有文章。</li>
+        <li>No posts yet.</li>
         {% endfor %}
     </ul>
 </section>

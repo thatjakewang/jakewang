@@ -47,11 +47,11 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # Compress responses over 500 bytes (HTML pages and the growing JSON payloads).
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
-# Per-client-IP cap on every endpoint (in-memory — fine for a single-process
+# Per-client-IP cap on every route (in-memory — fine for a single-process
 # deployment). /health and /robots.txt are exempted at their definitions below,
-# so monitors and crawlers are never throttled. The cap covers pages and static
-# assets too, and one page load pulls fewer than 10 requests, so it sits well
-# above a browser's burst rather than at an API-only value.
+# so monitors and crawlers are never throttled. It covers the pages and the
+# API; slowapi only limits requests that match a route, so the /static mount
+# and 404s pass through uncounted.
 #
 # Behind a reverse proxy, uvicorn needs --proxy-headers (and
 # --forwarded-allow-ips) or get_remote_address sees the proxy for every client.
@@ -78,18 +78,28 @@ STATIC_CACHE_MAX_AGE = int(timedelta(days=365).total_seconds())
 ERROR_PAGES = {404: "Page Not Found", 500: "Internal Server Error"}
 
 
-@app.middleware("http")
-async def add_response_headers(request: Request, call_next):
-    """Baseline security headers on everything, plus per-kind Cache-Control.
+# Everything the pages load is same-origin: two scripts, one stylesheet, the
+# favicons. Inline style attributes stay allowed because the Markdown tables
+# extension emits them for column alignment; inline scripts do not.
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data:; "
+    "object-src 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "frame-ancestors 'none'"
+)
+
+
+def set_security_headers(response) -> None:
+    """Baseline security headers, shared by the middleware and the 500 handler.
 
     setdefault() throughout, so nginx can override any of these without a
-    code change. Requests carrying x-api-key are never marked publicly
-    cacheable, since those responses are fetched with a personal key, and
-    neither is anything that set a cookie on its way out.
+    code change.
     """
-    response = await call_next(request)
-
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
     # Disallow embedding the site in iframes (clickjacking protection)
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -103,6 +113,18 @@ async def add_response_headers(request: Request, call_next):
     # already-indexed URLs would linger instead of being dropped.
     response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
 
+
+@app.middleware("http")
+async def add_response_headers(request: Request, call_next):
+    """Baseline security headers on everything, plus per-kind Cache-Control.
+
+    Requests carrying x-api-key are never marked publicly cacheable, since
+    those responses are fetched with a personal key, and neither is anything
+    that set a cookie on its way out.
+    """
+    response = await call_next(request)
+    set_security_headers(response)
+
     if (
         request.method == "GET"
         and response.status_code == 200
@@ -114,7 +136,8 @@ async def add_response_headers(request: Request, call_next):
         path = request.url.path
         if path.startswith("/static/"):
             max_age = STATIC_CACHE_MAX_AGE
-        elif path in ("/", "/mytesla/"):
+        # Every HTML page: home, the dashboard, and the article pages.
+        elif response.headers.get("content-type", "").startswith("text/html"):
             max_age = PAGE_CACHE_MAX_AGE
         else:
             max_age = None
@@ -151,20 +174,24 @@ async def unhandled_error_handler(request: Request, exc: Exception):
         request.url.path,
         exc_info=(type(exc), exc, exc.__traceback__),
     )
-    headers = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"}
+    headers = {"Cache-Control": "no-store"}
     if request.url.path.startswith("/api/"):
-        return JSONResponse(
+        response = JSONResponse(
             status_code=500,
             content={"detail": ERROR_PAGES[500]},
             headers=headers,
         )
-    return templates.TemplateResponse(
-        request=request,
-        name="error.html",
-        status_code=500,
-        context={"code": 500, "message": ERROR_PAGES[500]},
-        headers=headers,
-    )
+    else:
+        response = templates.TemplateResponse(
+            request=request,
+            name="error.html",
+            status_code=500,
+            context={"code": 500, "message": ERROR_PAGES[500]},
+            headers=headers,
+        )
+    # This handler runs outside the middleware above, so set them here too.
+    set_security_headers(response)
+    return response
 
 
 # Crawlers that exist to collect training/retrieval corpora. Blocked by name,
@@ -249,7 +276,7 @@ def tesla_dashboard(request: Request, db: Session = Depends(get_db)):
     """Tesla cost dashboard, rendered server-side in one DB session.
 
     tesla.get_dashboard() resolves every widget from one session, so the whole
-    page costs ten queries and no HTTP round trip. Every period is rendered;
+    page costs eleven queries and no HTTP round trip. Every period is rendered;
     the period switch only changes which one is shown.
     """
     return templates.TemplateResponse(
@@ -262,6 +289,6 @@ def tesla_dashboard(request: Request, db: Session = Depends(get_db)):
     )
 
 
-# Tesla cost tracking (public stats + protected writes for charging/car expenses)
+# Tesla cost tracking (protected writes for charging, car expenses, odometer)
 app.include_router(tesla.router, prefix="/api/tesla", tags=["Tesla"])
 posts.register_routes(app)

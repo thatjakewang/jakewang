@@ -1,12 +1,14 @@
 # jakewang.dev
 
 Personal project site and its backend, served as one app from one origin: the
-pages at `/` and `/mytesla/`, rendered server-side from the database. The only
-API is `/api/tesla/*`, and it is write-only — iPhone Shortcuts log records
-there with an API key.
+home page at `/`, the Tesla dashboard at `/mytesla/` (rendered server-side from
+the database), and Markdown articles under `/kintone/`. The only API is
+`/api/tesla/*`, and it is write-only — iPhone Shortcuts log records there with
+an API key.
 
-Not a traffic-facing site: there is no analytics, no sitemap/robots, and no SEO
-metadata.
+Not a traffic-facing site: there is no analytics, no sitemap, and no SEO
+metadata. Every response is `noindex`, and `/robots.txt` exists only to turn
+the AI crawlers away.
 
 ## Stack
 
@@ -14,10 +16,11 @@ metadata.
 - **Jinja2** — server-rendered page shells
 - **PostgreSQL** + **SQLAlchemy** — storage
 - **uvicorn** — ASGI server
+- **python-frontmatter** + **Markdown** + **Pygments** — the articles
 
 ## Authentication
 
-One credential, one direction: `x-api-key` on the three write endpoints, used
+One credential, one direction: `x-api-key` on the write endpoints, used
 by iPhone Shortcuts. Everything the site serves to a browser is public, so
 there is no login, no session, and no user table.
 
@@ -44,15 +47,17 @@ app/
   dependencies.py  # x-api-key verification (the only credential)
   templating.py    # the Jinja environment, its globals, and the number filters
   utils.py         # row serialization, response envelope, date helpers
-  tesla.py         # the three writes, and the queries behind the dashboard
-templates/         # Jinja page shells (base + home + dashboard + error)
+  tesla.py         # the writes and their undo, and the queries behind the dashboard
+  posts.py         # Markdown articles: parsing, validation, category routes
+posts/             # the articles, one folder per category (posts/kintone/*.md)
+templates/         # Jinja page shells (base, home, dashboard, article list + page, error)
 static/            # The JS/CSS the browser gets, plus favicons — no build step
+tests/             # pytest: period maths, write rules, article parsing
 schema.sql         # reference DDL for rebuilding the database
 ```
 
 The dashboard is rendered server-side: `/mytesla/` calls `get_dashboard()`,
-which resolves eight queries for this month or seven for the trailing 90 days
-in one session, and Jinja prints the numbers
+which resolves eleven queries in one session, and Jinja prints the numbers
 straight into the HTML. The page
 ships one small script of its own, `static/js/tesla.js` for the period
 switch; the only other script on the site is `static/js/nav.js` for the
@@ -64,6 +69,21 @@ The period switch (`This month` / `Last 90 days` / `Last 12 months`) is a
 client-side toggle: `get_period_summary()` queries every window up front (plus
 the prior month for the comparison), all of them are rendered, and
 `static/js/tesla.js` only shows the selected one. The URL never changes.
+
+A period's total cost covers its calendar window. Its distance and per-km
+figures cover the span between two odometer readings — the last one before the
+window and the last one inside it — and count only the costs recorded in that
+span, so numerator and denominator always describe the same stretch of driving.
+The panel prints the reading dates it used.
+
+### Articles
+
+An article is a Markdown file under `posts/<category>/` with `title`, `date`
+and `category` in its front matter; `slug` and `tags` are optional. Categories
+are declared in `CATEGORIES` in `app/posts.py` (currently just `kintone`), and
+each gets a list page and one page per article. A file that fails validation is
+logged and skipped rather than breaking the list. Files are re-read when they
+change, so publishing is `git pull` — no restart.
 
 ## Environment Variables
 
@@ -101,8 +121,16 @@ they pull in — and is what gets installed. Regenerate it after changing a pin:
 uv pip compile requirements.txt -o requirements.lock
 ```
 
-There is no automated test suite and no CI: `git push` runs nothing. Check
-changes by running the app locally before deploying.
+There is a small test suite and no CI: `git push` runs nothing. Run the tests
+and the app locally before deploying:
+
+```bash
+pip install -r requirements-dev.txt   # pytest; local only, never on the server
+pytest tests
+```
+
+The tests need no database — they cover the period date windows, the odometer
+span, the write rules, and article parsing, all without a query.
 
 ### Frontend assets
 
@@ -174,8 +202,8 @@ database with:
 psql "$DATABASE_URL" -f schema.sql
 ```
 
-Schema changes are delivered as migration scripts in `migrations/`.
-The workflow:
+Schema changes are delivered as migration scripts in `migrations/`, a
+directory that only exists while a script is pending. The workflow:
 
 1. Deploy code that works with both the old and the new schema (see
    [Deployment](#deployment)).
@@ -209,7 +237,8 @@ psql "$DATABASE_URL" -c "SELECT conrelid::regclass AS tbl, conname
 
 ## Endpoints
 
-**The API is write-only.** It exists so iPhone Shortcuts can log records; the
+**The API is write-only.** It exists so iPhone Shortcuts can log records (and
+take the last one back); the
 dashboard reads nothing over HTTP, because it is rendered server-side from the
 same queries. Those read endpoints existed while the page fetched its own data
 and were removed once nothing called them — the queries live on as plain
@@ -224,10 +253,12 @@ functions in `app/tesla.py`, called by `get_dashboard()`.
 
 > Note: all tables carry an `id` (SERIAL) column, which is what the writes return.
 
-> Rate limiting: everything except `/health` is capped at 600 requests/minute per
-> client IP (in-memory, via slowapi). The cap covers pages and static assets too,
-> and one page load pulls fewer than 10 requests. Behind a reverse proxy, run uvicorn with
-> `--proxy-headers` (and `--forwarded-allow-ips`) so the real client IP is used.
+> Rate limiting: pages and the API are capped at 600 requests/minute per client
+> IP (in-memory, via slowapi); `/health` and `/robots.txt` are exempt. Static
+> assets and 404s are not counted — slowapi only limits requests that match a
+> route — so throttle those in nginx if it ever matters. Behind a reverse proxy,
+> run uvicorn with `--proxy-headers` (and `--forwarded-allow-ips`) so the real
+> client IP is used.
 
 ### Protected (Header: `x-api-key`)
 
@@ -236,6 +267,14 @@ functions in `app/tesla.py`, called by `get_dashboard()`.
 | POST | `/api/tesla/charging-records` | Create a charging record |
 | POST | `/api/tesla/car-expenses` | Create a car expense |
 | POST | `/api/tesla/odometer` | Log a total-odometer reading |
+| DELETE | `/api/tesla/charging-records/latest` | Delete the last charging record logged |
+| DELETE | `/api/tesla/car-expenses/latest` | Delete the last car expense logged |
+| DELETE | `/api/tesla/odometer/latest` | Delete the last odometer reading logged |
+
+**Retries are safe.** A `POST` identical to a record created in the last two
+minutes returns that record's `id` and inserts nothing, so a Shortcut that
+timed out and ran again does not log the charge twice. Two genuinely identical
+records (the same toll twice) have to be logged more than two minutes apart.
 
 ### POST `/api/tesla/charging-records`
 
@@ -290,12 +329,33 @@ Response includes `id`:
 `reading_date` is optional (defaults to today). The dashboard's cost-per-km
 automatically follows the latest reading.
 
+An odometer only counts up, so a reading lower than an earlier-dated one, or
+higher than a later-dated one, is refused with a 422 — it is a typo, and one
+bad reading would skew every per-km figure.
+
+### DELETE `/api/tesla/<resource>/latest`
+
+Removes the most recently *inserted* record of that kind (highest `id`,
+whatever date it carries) and returns it, so the Shortcut can show what went.
+404 when the table is empty. This is the undo for a mistyped entry; unlike the
+writes it is not retry-safe — calling it twice deletes two records.
+
+```json
+{
+  "status": "success",
+  "message": "Odometer reading deleted",
+  "data": { "id": 88, "reading_km": 2312, "reading_date": "2026-06-09" }
+}
+```
+
 ## Pages
 
 | Path | Description |
 |------|-------------|
 | `/` | Home — intro, project cards, skills |
-| `/mytesla/` | Tesla cost dashboard, server-rendered (`?period=trailing_90_days` for the 90-day window) |
+| `/mytesla/` | Tesla cost dashboard, server-rendered |
+| `/kintone/` | Kintone articles, newest first |
+| `/kintone/<slug>/` | One article |
 
 ## Caching
 
@@ -304,12 +364,17 @@ automatically follows the latest reading.
 | Kind | max-age | Why |
 |------|---------|-----|
 | `/static/*` | 1 year | URLs carry a `?v=<mtime>` cache-buster, so this is safe |
-| pages | 60s | The dashboard's numbers are rendered into them |
+| HTML pages | 60s | The dashboard's numbers are rendered into them; articles follow the same window |
 
 Only `GET`s that return 200 get a window at all, so the API's writes never do.
 Requests carrying `x-api-key` are never marked publicly cacheable either, nor
 is any response that sets a cookie. Nothing on the site is private any more, so
 there is no `no-store` tier left.
+
+The same middleware sets the security headers, including a
+`Content-Security-Policy` that only allows same-origin scripts, styles and
+images. An article that embeds an image or script from another host needs that
+policy widened in `app/main.py`.
 
 There is **no CORS layer**: pages and API share an origin, so nothing
 cross-origin happens. Adding one back would quietly re-open the write API to

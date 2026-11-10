@@ -6,11 +6,12 @@ application. It once had to live here to avoid a circular import with the page
 routers; that constraint is gone, and this is now a choice.
 """
 
-from datetime import date
 from functools import lru_cache
 from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
+
+from app.utils import get_today
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
@@ -75,7 +76,7 @@ def money(value, fallback: str = NO_DATA, suffix: str = "") -> str:
 def current_year() -> int:
     """Footer copyright year. A function, not a value, so a long-running
     process doesn't keep serving the year it booted in."""
-    return date.today().year
+    return get_today().year
 
 
 templates.env.globals["static_url"] = static_url
