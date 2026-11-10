@@ -5,7 +5,8 @@
     content       — page body
     extra_scripts — page-specific JS, loaded at the end of <body>
 
-  Views pass meta_title. Jinja globals from app/templating.py:
+  Views pass meta_title, and indexable=True on the pages search engines may
+  index (the articles). Jinja globals from app/templating.py:
   static_url(), current_year().
 #}
 <!DOCTYPE html>
@@ -15,8 +16,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff">
     {# Also sent as an X-Robots-Tag header (app/main.py); the tag is here too
-       because it is what most crawlers and audit tools look at first. #}
-    <meta name="robots" content="noindex, nofollow">
+       because it is what most crawlers and audit tools look at first.
+       Everything is noindex unless the view passes indexable (app/posts.py). #}
+    {% if not indexable %}<meta name="robots" content="noindex, nofollow">{% endif %}
     <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
     <title>{% block title %}{{ meta_title | default('Jake Wang') }}{% endblock %}</title>
     <script src="{{ static_url('js/nav.js') }}" defer></script>

@@ -2,7 +2,7 @@
 title: How to Apply Conditional Formatting to Kintone Fields Using JavaScript
 date: 2026-11-04
 category: kintone
-tags: [JavaScript]
+tags: [List view, Styling]
 slug: kintone-javascript-conditional-formatting
 ---
 
@@ -48,11 +48,17 @@ You want a field to stand out when it has a certain value, for example a red, bo
 })();
 ```
 
-On the form, add a Drop-down field with the field code `Priority` and an option `High`, and add `Priority` to the list view. Upload the file under **App Settings** > **Customization and Integration** > **JavaScript and CSS Customization** > **JavaScript Files for PC**, then click **Update App**.
+To set it up:
+
+1. On the form, add a Drop-down field with the field code `Priority` and an option `High`.
+2. Add `Priority` to the list view as a column.
+3. [Upload the file](/kintone/kintone-upload-javascript-css/).
 
 `kintone.app.record.getFieldElement()` returns the field's value element on the record details screen. It doesn't work on the create and edit screens, so the formatting only appears once the record is saved.
 
-`kintone.app.getFieldElements()` returns one element per row in a List view, in the same order as `event.records`. It returns `null` if the field isn't in the view, so the field has to be one of the view's columns.
+`kintone.app.getFieldElements()` returns one element per row in a List view, in the same order as `event.records`. It returns `null` if the field isn't in the view, so the field has to be one of the view's columns. It also returns `null` in a Calendar view or a Custom view, so the handler does nothing there.
+
+The styling is applied when the list loads. If you change a record's `Priority` by editing it in the list, reload the page to update its formatting.
 
 `Object.assign(el.style, STYLE)` copies every property in `STYLE` onto the element, so you change the look by editing `STYLE` only.
 

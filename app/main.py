@@ -106,10 +106,12 @@ def set_security_headers(response) -> None:
     response.headers.setdefault(
         "Permissions-Policy", "camera=(), microphone=(), geolocation=()"
     )
-    # Keep the whole site out of search indexes. As a header rather than only a
-    # <meta> tag, this also covers the JSON API and static assets, which cannot
-    # carry meta tags. robots.txt deliberately still allows search engines to
-    # fetch pages — a crawler that is blocked can never read this directive, and
+    # Keep the site out of search indexes by default. As a header rather than
+    # only a <meta> tag, this also covers the JSON API and static assets, which
+    # cannot carry meta tags. The article pages are the exception: they set
+    # their own X-Robots-Tag (app/posts.py), which setdefault() leaves alone.
+    # robots.txt deliberately still allows search engines to fetch every page —
+    # a crawler that is blocked can never read this directive, and
     # already-indexed URLs would linger instead of being dropped.
     response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
 
@@ -221,12 +223,12 @@ AI_CRAWLERS = (
 )
 
 ROBOTS_TXT = (
-    "# Personal project site. It wants no search traffic, and does not permit\n"
-    "# its content to be used for AI training or retrieval.\n"
+    "# Personal project site. Only the articles are meant to be indexed, and\n"
+    "# none of its content may be used for AI training or retrieval.\n"
     "#\n"
-    "# Search engines may crawl: every response carries X-Robots-Tag: noindex,\n"
-    "# and a blocked crawler could never read that. Crawling is how these pages\n"
-    "# get dropped from the index.\n"
+    "# Search engines may crawl everything: the pages that should stay out of\n"
+    "# the index say so with X-Robots-Tag: noindex, and a blocked crawler\n"
+    "# could never read that.\n"
     "\n"
     + "".join(f"User-agent: {bot}\n" for bot in AI_CRAWLERS)
     + "Disallow: /\n"
@@ -239,7 +241,8 @@ ROBOTS_TXT = (
 @app.get("/robots.txt", response_class=PlainTextResponse)
 @limiter.exempt
 def robots_txt():
-    """Block the AI crawlers by name; let search engines through to the noindex."""
+    """Block the AI crawlers by name; let search engines through to read
+    each page's own index/noindex directive."""
     return ROBOTS_TXT
 
 

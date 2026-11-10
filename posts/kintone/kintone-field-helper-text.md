@@ -2,7 +2,7 @@
 title: How to Show Helper Text Below a Kintone Field Using JavaScript and CSS
 date: 2026-11-04
 category: kintone
-tags: [JavaScript,CSS]
+tags: [Forms, CSS]
 slug: kintone-field-helper-text
 ---
 
@@ -39,7 +39,11 @@ You want a short hint under a field while people fill in a record, for example "
 })();
 ```
 
-On the form, add a Text field with the field code `Phone`, and put a Blank space field with the Element ID `phone_help` directly below it, at the same width. Upload the file under **App Settings** > **Customization and Integration** > **JavaScript and CSS Customization** > **JavaScript Files for PC**, then click **Update App**.
+To set it up:
+
+1. On the form, add a Text field with the field code `Phone`.
+2. Put a Blank space field with the Element ID `phone_help` directly below it, at the same width.
+3. [Upload the file](/kintone/kintone-upload-javascript-css/) as a JavaScript file.
 
 `HELP` maps each Blank space field's Element ID to its text, so you add helper text to another field by adding a Blank space field below it and one line to `HELP`.
 
@@ -60,9 +64,11 @@ The text is only added on the create and edit screens, where people type. On the
 }
 ```
 
-Upload this file under **JavaScript and CSS Customization** > **CSS Files for PC**, then click **Update App**.
+[Upload this file](/kintone/kintone-upload-javascript-css/) as a CSS file.
 
 The class name `field-help` is one the JavaScript sets, not one of Kintone's own, so a Kintone update won't break the styling. To make a hint stand out as a warning, change `color` to `#b42318`.
+
+A Blank space field can hold a button too. See [How to Create a Button in a Kintone Space Field Using JavaScript](/kintone/kintone-space-field-button-javascript/).
 
 **References**
 

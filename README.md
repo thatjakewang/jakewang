@@ -6,9 +6,9 @@ the database), and Markdown articles under `/kintone/`. The only API is
 `/api/tesla/*`, and it is write-only — iPhone Shortcuts log records there with
 an API key.
 
-Not a traffic-facing site: there is no analytics, no sitemap, and no SEO
-metadata. Every response is `noindex`, and `/robots.txt` exists only to turn
-the AI crawlers away.
+Mostly not a traffic-facing site: there is no analytics and no sitemap. Every
+response is `noindex` except the articles under `/kintone/`, which search
+engines may index. `/robots.txt` exists only to turn the AI crawlers away.
 
 ## Stack
 
@@ -84,6 +84,11 @@ are declared in `CATEGORIES` in `app/posts.py` (currently just `kintone`), and
 each gets a list page and one page per article. A file that fails validation is
 logged and skipped rather than breaking the list. Files are re-read when they
 change, so publishing is `git pull` — no restart.
+
+The article list and article pages are the only indexable responses: their
+routes send `X-Robots-Tag: all` and pass `indexable` to the template, which
+drops the `noindex` meta tag. Everything else, including a 404 under
+`/kintone/`, keeps the site-wide `noindex, nofollow`.
 
 ## Environment Variables
 

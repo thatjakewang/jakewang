@@ -2,7 +2,7 @@
 title: How to Display a Status Summary Chart on a Kintone Record List Using JavaScript and Chart.js
 date: 2026-11-05
 category: kintone
-tags: [JavaScript]
+tags: [List view, Process Management, Chart.js]
 slug: kintone-record-list-status-chart
 ---
 
@@ -71,7 +71,13 @@ You want to see at a glance how many records are at each status, for example a b
 })();
 ```
 
-Turn on Process Management with the statuses `Not started`, `In progress` and `Completed`. Under **App Settings** > **Customization and Integration** > **JavaScript and CSS Customization** > **JavaScript Files for PC**, click **Add Link** and enter `https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js`, then upload this file below it and click **Update App**. Chart.js has to come first so `Chart` exists when this file runs.
+To set it up:
+
+1. Turn on Process Management with the statuses `Not started`, `In progress` and `Completed`.
+2. On the [JavaScript and CSS Customization](/kintone/kintone-upload-javascript-css/) page, click **Add Link** and enter `https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js`.
+3. Upload this file below the link, then click **Save** and **Update App**.
+
+Chart.js has to come first so `Chart` exists when this file runs.
 
 `kintone.app.getHeaderSpaceElement()` returns the empty area above the record list. The `querySelector('canvas')` check reuses the same canvas when the list reloads, and `chart.destroy()` clears the old chart before drawing the new one.
 
@@ -80,6 +86,8 @@ Turn on Process Management with the statuses `Not started`, `In progress` and `C
 `kintone.app.getQueryCondition()` returns the list's current filter, so the chart counts the same records the list shows. It returns an empty string when there's no filter, which is why `query` only adds it when there is one.
 
 `Status` is the field code of the status field, which isn't the same in every app, so check it in the form settings.
+
+To change what a record shows at each status, see [How to Show Only Relevant Field Groups Based on a Workflow Status in Kintone Using JavaScript](/kintone/kintone-workflow-field-groups/).
 
 ## Other chart types
 

@@ -25,6 +25,11 @@ from app.templating import BASE_DIR, templates
 logger = logging.getLogger(__name__)
 POSTS_DIR = BASE_DIR / "posts"
 CATEGORIES = {"kintone": "Kintone"}
+# The articles are the one part of the site meant to be found by search. The
+# header overrides the site-wide noindex default set in app/main.py, and the
+# `indexable` context flag does the same for the <meta> tag in base.html.
+# Only the two 200 responses below carry them, so a 404 here stays noindex.
+INDEXABLE_HEADERS = {"X-Robots-Tag": "all"}
 SEGMENT = re.compile(r"[\w]+(?:-[\w]+)*", re.UNICODE)
 
 
@@ -125,8 +130,9 @@ def _category_router(category: str, label: str) -> APIRouter:
     @router.get("/", response_class=HTMLResponse, name=f"{category}_list")
     def post_list(request: Request):
         return templates.TemplateResponse(
-            request=request, name="posts.html",
+            request=request, name="posts.html", headers=INDEXABLE_HEADERS,
             context={"meta_title": f"{label} – Jake Wang", "category_label": label,
+                     "indexable": True,
                      "posts": [p for p in get_posts() if p.category == category]},
         )
 
@@ -136,8 +142,9 @@ def _category_router(category: str, label: str) -> APIRouter:
         if post is None:
             raise HTTPException(status_code=404)
         return templates.TemplateResponse(
-            request=request, name="post.html",
+            request=request, name="post.html", headers=INDEXABLE_HEADERS,
             context={"meta_title": f"{post.title} – Jake Wang", "post": post,
+                     "indexable": True,
                      "category_label": label, "category_url": f"/{category}/"},
         )
 

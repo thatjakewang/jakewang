@@ -2,7 +2,7 @@
 title: How to Show Only Relevant Field Groups Based on a Workflow Status in Kintone Using JavaScript
 date: 2026-11-05
 category: kintone
-tags: [JavaScript]
+tags: [Process Management, Forms]
 slug: kintone-workflow-field-groups
 ---
 
@@ -22,14 +22,19 @@ You want a record to show only the fields that matter at its current step, for e
     'Completed': ['Request', 'Review', 'Approval'],
   };
 
+  const ON_CREATE = ['Request'];
+
   const EVENTS = [
+    'app.record.create.show',
     'app.record.detail.show',
     'app.record.edit.show',
+    'app.record.print.show',
   ];
 
   kintone.events.on(EVENTS, (event) => {
-    const status = event.record.Status.value;
-    const shown = SHOWN[status] || GROUPS;
+    const shown = event.type === 'app.record.create.show'
+      ? ON_CREATE
+      : SHOWN[event.record.Status.value] || GROUPS;
     for (const group of GROUPS) {
       const isShown = shown.includes(group);
       kintone.app.record.setFieldShown(group, isShown);
@@ -39,7 +44,12 @@ You want a record to show only the fields that matter at its current step, for e
 })();
 ```
 
-Turn on Process Management with the statuses `Not started`, `In progress` and `Completed`. On the form, add three Group fields with the field codes `Request`, `Review` and `Approval`, and put each step's fields inside its group. Upload the file under **App Settings** > **Customization and Integration** > **JavaScript and CSS Customization** > **JavaScript Files for PC**, then click **Update App**.
+To set it up:
+
+1. Turn on Process Management with the statuses `Not started`, `In progress` and `Completed`.
+2. On the form, add three Group fields with the field codes `Request`, `Review` and `Approval`.
+3. Put each step's fields inside its group.
+4. [Upload the file](/kintone/kintone-upload-javascript-css/).
 
 `SHOWN` maps each status to the groups visible at that status, and `GROUPS` lists every group the script controls. A status missing from `SHOWN` shows all of them, so a status you add later doesn't hide anything by accident.
 
@@ -47,7 +57,9 @@ Turn on Process Management with the statuses `Not started`, `In progress` and `C
 
 `kintone.app.record.setFieldShown()` hides or shows a field by its field code. Hiding a Group field hides every field inside it.
 
-The create screen is left out because a new record has no status until it's saved.
+A new record has no status until it's saved, so the create screen can't look one up in `SHOWN`. It shows the groups in `ON_CREATE` instead, which is the first step's.
+
+The print screen is in `EVENTS` too. Without it, the hidden groups would come back when someone prints the record.
 
 ## Open the current step's group
 
@@ -60,7 +72,11 @@ kintone.app.record.setGroupFieldOpen(current, true);
 
 The last group in each `SHOWN` list is the current step, so that's the one this opens. The earlier groups keep their open or closed setting.
 
+## Hiding is not security
+
 Hiding a group only changes what's on screen. The fields keep their values, and anyone who can view the record can still see them in list views, exports and the REST API. For fields people mustn't see, use **Field Permissions** instead.
+
+To see how many records are at each status, see [How to Display a Status Summary Chart on a Kintone Record List Using JavaScript and Chart.js](/kintone/kintone-record-list-status-chart/).
 
 **References**
 
