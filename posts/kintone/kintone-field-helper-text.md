@@ -71,6 +71,8 @@ The class name `field-help` is one the JavaScript sets, not one of Kintone's own
 
 A Blank space field can hold a button too. See [How to Create a Button in a Kintone Space Field Using JavaScript](/kintone/kintone-space-field-button-javascript/).
 
+To style a field by its value, see [How to Conditionally Format Kintone Fields With JavaScript](/kintone/kintone-javascript-conditional-formatting/).
+
 **References**
 
 1. [kintone.app.record.getSpaceElement() – Kintone Developer Program](https://kintone.dev/en/docs/kintone/js-api/record/get-space-element/)

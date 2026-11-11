@@ -1,6 +1,7 @@
 ---
 title: How to Add JavaScript and CSS Files to a Kintone App
 date: 2026-11-10
+updated: 2026-11-11
 category: kintone
 tags: [Setup]
 slug: kintone-upload-javascript-css
@@ -34,6 +35,15 @@ Open the app, then open the browser's developer tools with `F12` and look at the
 ## Mobile
 
 Files under **JavaScript Files for PC** only run in the desktop view. The mobile view has its own upload section on the same page, and the code is not the same: event names start with `mobile.`, as in `mobile.app.record.detail.show`, and the functions live under `kintone.mobile.app` instead of `kintone.app`. The posts in this category are written for the desktop view.
+
+## What to build next
+
+Once a file loads, these are good first customizations:
+
+- [How to Create a Button in a Kintone Space Field Using JavaScript](/kintone/kintone-space-field-button-javascript/)
+- [How to Add Helper Text Below a Kintone Field With JavaScript](/kintone/kintone-field-helper-text/)
+- [How to Conditionally Format Kintone Fields With JavaScript](/kintone/kintone-javascript-conditional-formatting/)
+- [How to Add Custom Validation to a Kintone Record Using JavaScript](/kintone/kintone-custom-validation-javascript/)
 
 **References**
 

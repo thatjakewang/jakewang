@@ -166,6 +166,25 @@ def get_posts() -> list[Post]:
     )
 
 
+def related_posts(post: Post, posts: list[Post], limit: int = 3) -> list[Post]:
+    """Other articles in the category to list under this one.
+
+    Those sharing the most tags come first, then the newest, so every article
+    gets a full list even when its tags are its own. Articles the body already
+    links to are left out: the block is there to add links, not repeat them.
+    """
+    candidates = [
+        other for other in posts
+        if other.category == post.category and other.url != post.url
+        and f'href="{other.url}"' not in post.html
+    ]
+    candidates.sort(
+        key=lambda other: (len(set(other.tags) & set(post.tags)), other.date, other.slug),
+        reverse=True,
+    )
+    return candidates[:limit]
+
+
 def _structured_data(post: Post, label: str) -> dict:
     """schema.org JSON-LD for an article: the post itself and its breadcrumb."""
     url = absolute_url(post.url)
@@ -215,7 +234,8 @@ def _category_router(category: str, label: str) -> APIRouter:
 
     @router.get("/{slug}/", response_class=HTMLResponse, name=f"{category}_detail")
     def post_detail(request: Request, slug: str):
-        post = next((p for p in get_posts() if p.category == category and p.slug == slug), None)
+        all_posts = get_posts()
+        post = next((p for p in all_posts if p.category == category and p.slug == slug), None)
         if post is None:
             raise HTTPException(status_code=404)
         return templates.TemplateResponse(
@@ -226,6 +246,7 @@ def _category_router(category: str, label: str) -> APIRouter:
                      "og_type": "article",
                      "meta_description": post.description,
                      "structured_data": _structured_data(post, label),
+                     "related": related_posts(post, all_posts),
                      "indexable": True,
                      "category_label": label, "category_url": f"/{category}/"},
         )

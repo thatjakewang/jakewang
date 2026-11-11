@@ -9,5 +9,14 @@
     {% if post.venue %}<p class="post-meta">Venue: {{ post.venue }}</p>{% endif %}
     {% if post.doi %}<p class="post-meta">DOI: {{ post.doi }}</p>{% endif %}
     <div class="post-content">{{ post.html }}</div>
+    {% if related %}
+    <nav class="related-posts" aria-label="Related posts">
+        <h2>Related posts</h2>
+        <ul>
+            {% for other in related %}<li><a href="{{ other.url }}">{{ other.title }}</a></li>
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
 </article>
 {% endblock %}

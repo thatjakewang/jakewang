@@ -3,7 +3,7 @@ from datetime import date
 
 import pytest
 
-from app.posts import _read_post
+from app.posts import _read_post, related_posts
 from app.templating import NO_DATA, money, number
 
 
@@ -49,6 +49,19 @@ def test_description_from_front_matter(tmp_path):
 def test_updated_defaults_to_the_publish_date(tmp_path):
     assert read(tmp_path, VALID).updated == date(2026, 11, 4)
     assert read(tmp_path, VALID + "\nupdated: 2026-11-10").updated == date(2026, 11, 10)
+
+
+def test_related_posts_prefer_shared_tags_and_skip_linked_ones(tmp_path):
+    def make(slug, tags, day, body="Hello."):
+        front = f"title: {slug}\ndate: 2026-11-{day:02d}\ncategory: kintone\ntags: [{tags}]"
+        return read(tmp_path, front, body=body, name=f"{slug}.md")
+
+    post = make("post", "Forms, CSS", 1, body="See [linked](/kintone/linked/).")
+    others = [make("linked", "Forms, CSS", 2), make("one-tag", "Forms", 3),
+              make("two-tags", "CSS, Forms", 4), make("newest", "Other", 9),
+              make("older", "Other", 5)]
+    related = related_posts(post, [post, *others])
+    assert [p.slug for p in related] == ["two-tags", "one-tag", "newest"]
 
 
 def test_body_h1_is_detected(tmp_path):

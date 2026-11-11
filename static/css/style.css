@@ -16,6 +16,8 @@
     background: var(--badge-bg); color: var(--link-color); font-size: 0.8rem;
 }
 .post-page, .post-list { overflow-wrap: anywhere; }
+.related-posts { margin-top: 3rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color); }
+.related-posts h2 { font-size: 1.1rem; }
 .post-content h1 { font-size: 2.2rem;}
 .post-content h2 { margin-top: 2.5rem; }
 .post-content h3 { margin-top: 1.75rem; }

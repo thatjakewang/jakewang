@@ -103,6 +103,8 @@ Swap these into `type`:
 
 For a pie or doughnut, remove `plugins: { legend: { display: false } }`. Those charts have no axis labels, so the legend is what tells the colors apart.
 
+To make single records stand out in the list below the chart, for example a red row for a `High` priority, see [How to Conditionally Format Kintone Fields With JavaScript](/kintone/kintone-javascript-conditional-formatting/).
+
 **References**
 
 1. [kintone.app.getHeaderSpaceElement() – Kintone Developer Program](https://kintone.dev/en/docs/kintone/js-api/app/get-record-list-header-element/)

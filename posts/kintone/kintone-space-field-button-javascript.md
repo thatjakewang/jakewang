@@ -66,6 +66,8 @@ The date is formatted by hand because `toISOString()` uses UTC and can be a day 
 
 A Blank space field can hold plain text too. See [How to Add Helper Text Below a Kintone Field With JavaScript](/kintone/kintone-field-helper-text/).
 
+To check a field's value when the record is saved, see [How to Add Custom Validation to a Kintone Record Using JavaScript](/kintone/kintone-custom-validation-javascript/).
+
 **References**
 
 1. [kintone.app.record.getSpaceElement() – Kintone Developer Program](https://kintone.dev/en/docs/kintone/js-api/record/get-space-element/)

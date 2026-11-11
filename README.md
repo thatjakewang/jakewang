@@ -86,7 +86,9 @@ paragraph, up to 160 characters.
 `updated` is the date of the last revision: it is shown beside the publish
 date and feeds the sitemap's `lastmod` and the JSON-LD `dateModified`. Categories
 are declared in `CATEGORIES` in `app/posts.py` (currently just `kintone`), and
-each gets a list page and one page per article. A file that fails validation is
+each gets a list page and one page per article. Under each article is a
+"Related posts" list: up to three others in the category that the body doesn't
+already link to, those sharing the most tags first, then the newest. A file that fails validation is
 logged and skipped rather than breaking the list. Files are re-read when they
 change, so publishing is `git pull` — no restart.
 

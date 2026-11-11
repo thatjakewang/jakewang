@@ -79,6 +79,8 @@ Hiding a group only changes what's on screen. The fields keep their values, and 
 
 To see how many records are at each status, see [How to Add a Status Chart to a Kintone List With Chart.js](/kintone/kintone-record-list-status-chart/).
 
+To stop a record from moving to the next status until its fields are filled in, see [How to Add Custom Validation to a Kintone Record Using JavaScript](/kintone/kintone-custom-validation-javascript/).
+
 **References**
 
 1. [kintone.app.record.setFieldShown() – Kintone Developer Program](https://kintone.dev/en/docs/kintone/js-api/record/show-or-hide-a-field/)
