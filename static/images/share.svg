@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#111827"/>
+  <rect x="0" y="0" width="1200" height="12" fill="#fb923c"/>
+  <g transform="translate(90 96) scale(1.75)">
+    <rect width="64" height="64" rx="14" fill="#ffffff"/>
+    <path fill="#111827" d="M15 15h8v23c0 8-4 12-12 12H8v-7h3c3 0 4-2 4-5V15Zm11 0h8l4 21 5-21h7l5 21 4-21h8L59 50h-8l-5-20-5 20h-7L26 15Z"/>
+  </g>
+  <text x="232" y="170" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="44" font-weight="500" fill="#e5e7eb">Jake Wang</text>
+  <text x="90" y="350" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="88" font-weight="700" fill="#ffffff">Kintone JavaScript</text>
+  <text x="90" y="456" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="88" font-weight="700" fill="#ffffff">Customization Guides</text>
+  <text x="90" y="546" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="36" fill="#fb923c">jakewang.dev/kintone</text>
+</svg>

@@ -23,7 +23,7 @@ from fastapi.responses import HTMLResponse
 from markupsafe import Markup
 from yaml import YAMLError
 
-from app.templating import BASE_DIR, absolute_url, templates
+from app.templating import BASE_DIR, absolute_url, share_image_url, templates
 
 logger = logging.getLogger(__name__)
 POSTS_DIR = BASE_DIR / "posts"
@@ -177,6 +177,7 @@ def _structured_data(post: Post, label: str) -> dict:
                 "@type": "BlogPosting",
                 "headline": post.title,
                 "description": post.description,
+                "image": share_image_url(),
                 "datePublished": post.date.isoformat(),
                 "dateModified": post.updated.isoformat(),
                 "url": url,

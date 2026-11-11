@@ -1,6 +1,7 @@
 ---
 title: How to Conditionally Format Kintone Fields With JavaScript
 date: 2026-11-04
+updated: 2026-11-10
 category: kintone
 tags: [List view, Styling]
 slug: kintone-javascript-conditional-formatting

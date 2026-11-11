@@ -8,8 +8,8 @@ an API key.
 
 Mostly not a traffic-facing site: there is no analytics. Every response is
 `noindex` except the articles under `/kintone/`, which search engines may
-index and which `/sitemap.xml` lists. `/robots.txt` turns the AI crawlers away
-and points to the sitemap.
+index and which `/sitemap.xml` lists. `/robots.txt` turns the AI training crawlers away,
+lets AI search (OAI-SearchBot, PerplexityBot) in, and points to the sitemap.
 
 ## Stack
 
@@ -95,7 +95,8 @@ routes send `X-Robots-Tag: all` and pass `indexable` to the template, which
 drops the `noindex` meta tag and adds a canonical link and a meta description.
 Article pages also carry schema.org JSON-LD (`BlogPosting` and
 `BreadcrumbList`), and indexable pages carry Open Graph tags for link
-previews. Every page has the Google Search Console verification tag.
+previews, all using one share image (`static/images/share.png`, drawn from
+`share.svg` beside it). Every page has the Google Search Console verification tag.
 Everything else, including a 404 under `/kintone/`, keeps the site-wide
 `noindex, nofollow`, except the home page, which is `noindex, follow` so
 crawlers can reach the articles through it. Canonical links and the sitemap
@@ -266,7 +267,7 @@ functions in `app/tesla.py`, called by `get_dashboard()`.
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Health check (pings the DB; 503 if unreachable) |
-| GET | `/robots.txt` | Allows search engines, blocks the AI crawlers, names the sitemap |
+| GET | `/robots.txt` | Allows search engines and AI search, blocks the AI training crawlers, names the sitemap |
 | GET | `/sitemap.xml` | The article lists and articles, on the canonical origin |
 
 > Note: all tables carry an `id` (SERIAL) column, which is what the writes return.

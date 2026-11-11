@@ -1,6 +1,7 @@
 ---
 title: How to Query Another Kintone App With Multiple Conditions
 date: 2026-11-09
+updated: 2026-11-10
 category: kintone
 tags: [REST API, Queries]
 slug: kintone-query-another-app-multiple-conditions

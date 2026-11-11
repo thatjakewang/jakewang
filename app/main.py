@@ -236,12 +236,13 @@ async def unhandled_error_handler(request: Request, exc: Exception):
     return response
 
 
-# Crawlers that exist to collect training/retrieval corpora. Blocked by name,
-# because the blanket "Disallow: /" that would stop them also stops the search
-# engines from ever reading the noindex directive above.
+# Crawlers that collect training corpora or fetch pages for a chat session.
+# Blocked by name, because the blanket "Disallow: /" that would stop them also
+# stops the search engines from ever reading the noindex directive above.
+# The AI search indexes (OAI-SearchBot, PerplexityBot) are deliberately not
+# here: they cite and link to the articles the way a search engine does.
 AI_CRAWLERS = (
     "GPTBot",              # OpenAI, training
-    "OAI-SearchBot",       # OpenAI, search index
     "ChatGPT-User",        # OpenAI, user-triggered fetch
     "ClaudeBot",           # Anthropic
     "Claude-Web",
@@ -249,7 +250,6 @@ AI_CRAWLERS = (
     "Google-Extended",     # Google, Gemini training (separate from Googlebot)
     "Applebot-Extended",   # Apple, training (separate from Applebot)
     "CCBot",               # Common Crawl, feeds many training sets
-    "PerplexityBot",
     "Bytespider",          # ByteDance
     "Amazonbot",
     "meta-externalagent",  # Meta
@@ -263,8 +263,9 @@ AI_CRAWLERS = (
 )
 
 ROBOTS_TXT = (
-    "# Personal project site. Only the articles are meant to be indexed, and\n"
-    "# none of its content may be used for AI training or retrieval.\n"
+    "# Personal project site. Only the articles are meant to be indexed, by\n"
+    "# search engines and AI search alike. None of its content may be used for\n"
+    "# AI training.\n"
     "#\n"
     "# Search engines may crawl everything: the pages that should stay out of\n"
     "# the index say so with X-Robots-Tag: noindex, and a blocked crawler\n"
@@ -283,8 +284,8 @@ ROBOTS_TXT = (
 @app.get("/robots.txt", response_class=PlainTextResponse)
 @limiter.exempt
 def robots_txt():
-    """Block the AI crawlers by name; let search engines through to read
-    each page's own index/noindex directive."""
+    """Block the AI training crawlers by name; let search engines and AI
+    search through to read each page's own index/noindex directive."""
     return ROBOTS_TXT
 
 

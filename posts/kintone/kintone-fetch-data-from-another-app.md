@@ -1,6 +1,7 @@
 ---
 title: How to Fetch Data From Another Kintone App With JavaScript
 date: 2026-11-09
+updated: 2026-11-10
 category: kintone
 tags: [REST API]
 slug: kintone-fetch-data-from-another-app

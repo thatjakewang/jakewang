@@ -1,6 +1,7 @@
 ---
 title: How to Add a Status Chart to a Kintone List With Chart.js
 date: 2026-11-05
+updated: 2026-11-10
 category: kintone
 tags: [List view, Process Management, Chart.js]
 slug: kintone-record-list-status-chart

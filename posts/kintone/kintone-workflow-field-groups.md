@@ -1,6 +1,7 @@
 ---
 title: How to Show Kintone Field Groups by Workflow Status
 date: 2026-11-05
+updated: 2026-11-10
 category: kintone
 tags: [Process Management, Forms]
 slug: kintone-workflow-field-groups
