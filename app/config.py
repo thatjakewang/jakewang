@@ -1,6 +1,6 @@
 """Application configuration (pydantic-settings).
 
-All runtime configuration (DB connection, API key, timezone) is defined here and
+All runtime configuration (DB connection, API key, timezone, site URL) is defined here and
 loaded from .env or environment variables.
 """
 
@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     shortcut_api_key: str
 
     app_timezone: str = "Asia/Taipei"
+
+    # The one origin search engines should index. Canonical links and the
+    # sitemap are built from it, not from the request's Host header, so a
+    # second hostname pointing here can't present itself as the original.
+    site_url: str = "https://jakewang.dev"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

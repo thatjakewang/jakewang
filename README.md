@@ -6,9 +6,10 @@ the database), and Markdown articles under `/kintone/`. The only API is
 `/api/tesla/*`, and it is write-only — iPhone Shortcuts log records there with
 an API key.
 
-Mostly not a traffic-facing site: there is no analytics and no sitemap. Every
-response is `noindex` except the articles under `/kintone/`, which search
-engines may index. `/robots.txt` exists only to turn the AI crawlers away.
+Mostly not a traffic-facing site: there is no analytics. Every response is
+`noindex` except the articles under `/kintone/`, which search engines may
+index and which `/sitemap.xml` lists. `/robots.txt` turns the AI crawlers away
+and points to the sitemap.
 
 ## Stack
 
@@ -79,7 +80,10 @@ The panel prints the reading dates it used.
 ### Articles
 
 An article is a Markdown file under `posts/<category>/` with `title`, `date`
-and `category` in its front matter; `slug` and `tags` are optional. Categories
+and `category` in its front matter; `slug`, `tags`, `description` and
+`updated` are optional. The meta description defaults to the first paragraph.
+`updated` is the date of the last revision: it is shown beside the publish
+date and feeds the sitemap's `lastmod` and the JSON-LD `dateModified`. Categories
 are declared in `CATEGORIES` in `app/posts.py` (currently just `kintone`), and
 each gets a list page and one page per article. A file that fails validation is
 logged and skipped rather than breaking the list. Files are re-read when they
@@ -87,8 +91,13 @@ change, so publishing is `git pull` — no restart.
 
 The article list and article pages are the only indexable responses: their
 routes send `X-Robots-Tag: all` and pass `indexable` to the template, which
-drops the `noindex` meta tag. Everything else, including a 404 under
-`/kintone/`, keeps the site-wide `noindex, nofollow`.
+drops the `noindex` meta tag and adds a canonical link and a meta description.
+Article pages also carry schema.org JSON-LD (`BlogPosting` and
+`BreadcrumbList`).
+Everything else, including a 404 under `/kintone/`, keeps the site-wide
+`noindex, nofollow`, except the home page, which is `noindex, follow` so
+crawlers can reach the articles through it. Canonical links and the sitemap
+are built from `SITE_URL`, never from the request's hostname.
 
 ## Environment Variables
 
@@ -98,11 +107,12 @@ All configuration is loaded via `pydantic-settings` from `.env` (or environment 
 DATABASE_URL=postgresql://user:password@host:port/dbname
 SHORTCUT_API_KEY=your_api_key
 APP_TIMEZONE=Asia/Taipei
+SITE_URL=https://jakewang.dev
 ```
 
 `DATABASE_URL` and `SHORTCUT_API_KEY` have no defaults — a deployment that
 forgot either fails to boot instead of running against the wrong database or
-an open write API. `APP_TIMEZONE` falls back to the value above.
+an open write API. `APP_TIMEZONE` and `SITE_URL` fall back to the values above.
 
 ## Setup & Run
 
@@ -254,12 +264,13 @@ functions in `app/tesla.py`, called by `get_dashboard()`.
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Health check (pings the DB; 503 if unreachable) |
-| GET | `/robots.txt` | Allows search engines, blocks the AI crawlers |
+| GET | `/robots.txt` | Allows search engines, blocks the AI crawlers, names the sitemap |
+| GET | `/sitemap.xml` | The article lists and articles, on the canonical origin |
 
 > Note: all tables carry an `id` (SERIAL) column, which is what the writes return.
 
 > Rate limiting: pages and the API are capped at 600 requests/minute per client
-> IP (in-memory, via slowapi); `/health` and `/robots.txt` are exempt. Static
+> IP (in-memory, via slowapi); `/health`, `/robots.txt` and `/sitemap.xml` are exempt. Static
 > assets and 404s are not counted — slowapi only limits requests that match a
 > route — so throttle those in nginx if it ever matters. Behind a reverse proxy,
 > run uvicorn with `--proxy-headers` (and `--forwarded-allow-ips`) so the real

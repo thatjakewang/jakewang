@@ -2,7 +2,8 @@
 {% block content %}
 <article class="post-page">
     <a href="{{ category_url }}">← {{ category_label }}</a>
-    <p class="post-meta"><time datetime="{{ post.date.isoformat() }}">{{ post.date.isoformat() }}</time></p>
+    <p class="post-meta"><time datetime="{{ post.date.isoformat() }}">{{ post.date.isoformat() }}</time>
+        {%- if post.updated != post.date %} · Updated <time datetime="{{ post.updated.isoformat() }}">{{ post.updated.isoformat() }}</time>{% endif %}</p>
     {% if not post.has_title %}<h1>{{ post.title }}</h1>{% endif %}
     {% if post.authors %}<p class="post-meta">Authors: {{ post.authors | join(', ') }}</p>{% endif %}
     {% if post.venue %}<p class="post-meta">Venue: {{ post.venue }}</p>{% endif %}

@@ -1,14 +1,17 @@
 """Category pages for trusted, repository-owned Markdown articles.
 
 Add categories to CATEGORIES, then set title, date and category in front matter.
-An optional slug overrides the filename-derived URL, and optional tags label
-the article in category lists. File changes invalidate the bounded parsing
+An optional slug overrides the filename-derived URL, optional tags label
+the article in category lists, an optional description replaces the first
+paragraph as the meta description, and an optional updated date records the
+last revision. File changes invalidate the bounded parsing
 cache; adding or deleting a file needs no process restart.
 """
 
 from dataclasses import dataclass
 from datetime import date
 from functools import lru_cache
+import html as html_lib
 import logging
 from pathlib import Path
 import re
@@ -20,11 +23,15 @@ from fastapi.responses import HTMLResponse
 from markupsafe import Markup
 from yaml import YAMLError
 
-from app.templating import BASE_DIR, templates
+from app.templating import BASE_DIR, absolute_url, templates
 
 logger = logging.getLogger(__name__)
 POSTS_DIR = BASE_DIR / "posts"
 CATEGORIES = {"kintone": "Kintone"}
+# Meta description for each category's list page.
+CATEGORY_DESCRIPTIONS = {
+    "kintone": "Short how-to posts on customizing Kintone apps with JavaScript and CSS.",
+}
 # The articles are the one part of the site meant to be found by search. The
 # header overrides the site-wide noindex default set in app/main.py, and the
 # `indexable` context flag does the same for the <meta> tag in base.html.
@@ -45,10 +52,21 @@ class Post:
     venue: str
     doi: str
     tags: tuple[str, ...]
+    description: str
+    updated: date
 
     @property
     def url(self) -> str:
         return f"/{self.category}/{self.slug}/"
+
+
+def _first_paragraph(html: str) -> str:
+    """The first paragraph as plain text, for the meta description."""
+    match = re.search(r"<p>(.*?)</p>", html, re.DOTALL)
+    if match is None:
+        return ""
+    text = html_lib.unescape(re.sub(r"<[^>]+>", "", match.group(1)))
+    return " ".join(text.split())
 
 
 @lru_cache(maxsize=256)
@@ -66,6 +84,11 @@ def _read_post(path: Path, mtime_ns: int, size: int) -> Post | None:
             published = date.fromisoformat(published)
         if type(published) is not date:
             raise ValueError("date must be YYYY-MM-DD")
+        updated = source.get("updated", published)
+        if isinstance(updated, str):
+            updated = date.fromisoformat(updated)
+        if type(updated) is not date or updated < published:
+            raise ValueError("updated must be YYYY-MM-DD, on or after date")
         slug = source.get("slug", re.sub(r"[^\w]+", "-", path.stem.lower()).strip("-"))
         if not isinstance(slug, str) or not SEGMENT.fullmatch(slug):
             raise ValueError("slug must contain words separated by hyphens")
@@ -75,7 +98,7 @@ def _read_post(path: Path, mtime_ns: int, size: int) -> Post | None:
         tags = source.get("tags", [])
         if not isinstance(tags, list) or not all(isinstance(t, str) and t.strip() for t in tags):
             raise ValueError("tags must be a list of nonempty strings")
-        for key in ("venue", "doi"):
+        for key in ("venue", "doi", "description"):
             if not isinstance(source.get(key, ""), str):
                 raise ValueError(f"{key} must be a string")
         html = markdown.markdown(
@@ -94,6 +117,8 @@ def _read_post(path: Path, mtime_ns: int, size: int) -> Post | None:
             "" if included("Venue") else source.get("venue", ""),
             "" if included("DOI") else source.get("doi", ""),
             tuple(dict.fromkeys(t.strip() for t in tags)),
+            source.get("description", "").strip() or _first_paragraph(html),
+            updated,
         )
     except (OSError, ValueError, TypeError, YAMLError) as exc:
         logger.warning("Skipping article %s: %s", path, exc)
@@ -124,6 +149,37 @@ def get_posts() -> list[Post]:
     )
 
 
+def _structured_data(post: Post, label: str) -> dict:
+    """schema.org JSON-LD for an article: the post itself and its breadcrumb."""
+    url = absolute_url(post.url)
+    authors = post.authors or ("Jake Wang",)
+    return {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "BlogPosting",
+                "headline": post.title,
+                "description": post.description,
+                "datePublished": post.date.isoformat(),
+                "dateModified": post.updated.isoformat(),
+                "url": url,
+                "mainEntityOfPage": url,
+                "inLanguage": "en",
+                "keywords": list(post.tags),
+                "author": [{"@type": "Person", "name": name} for name in authors],
+            },
+            {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {"@type": "ListItem", "position": 1, "name": label,
+                     "item": absolute_url(f"/{post.category}/")},
+                    {"@type": "ListItem", "position": 2, "name": post.title, "item": url},
+                ],
+            },
+        ],
+    }
+
+
 def _category_router(category: str, label: str) -> APIRouter:
     router = APIRouter(prefix=f"/{category}")
 
@@ -132,6 +188,7 @@ def _category_router(category: str, label: str) -> APIRouter:
         return templates.TemplateResponse(
             request=request, name="posts.html", headers=INDEXABLE_HEADERS,
             context={"meta_title": f"{label} – Jake Wang", "category_label": label,
+                     "meta_description": CATEGORY_DESCRIPTIONS.get(category, ""),
                      "indexable": True,
                      "posts": [p for p in get_posts() if p.category == category]},
         )
@@ -144,11 +201,26 @@ def _category_router(category: str, label: str) -> APIRouter:
         return templates.TemplateResponse(
             request=request, name="post.html", headers=INDEXABLE_HEADERS,
             context={"meta_title": f"{post.title} – Jake Wang", "post": post,
+                     "meta_description": post.description,
+                     "structured_data": _structured_data(post, label),
                      "indexable": True,
                      "category_label": label, "category_url": f"/{category}/"},
         )
 
     return router
+
+
+def sitemap_entries() -> list[tuple[str, date]]:
+    """(path, last modified) for every indexable page: each category list that
+    has articles, dated by its latest change, then the articles themselves."""
+    all_posts = get_posts()
+    entries = []
+    for category in CATEGORIES:
+        newest = max((p.updated for p in all_posts if p.category == category), default=None)
+        if newest is not None:
+            entries.append((f"/{category}/", newest))
+    entries.extend((post.url, post.updated) for post in all_posts)
+    return entries
 
 
 def register_routes(app: FastAPI) -> None:

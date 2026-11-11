@@ -12,10 +12,11 @@ are rendered into the HTML rather than fetched by the browser.
 
 import logging
 from datetime import timedelta
+from xml.sax.saxutils import escape
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -28,7 +29,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.database import get_db
 from app import posts, tesla
 
-from app.templating import STATIC_DIR, templates
+from app.templating import STATIC_DIR, absolute_url, templates
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Per-client-IP cap on every route (in-memory — fine for a single-process
-# deployment). /health and /robots.txt are exempted at their definitions below,
+# deployment). /health, /robots.txt and /sitemap.xml are exempted at their definitions below,
 # so monitors and crawlers are never throttled. It covers the pages and the
 # API; slowapi only limits requests that match a route, so the /static mount
 # and 404s pass through uncounted.
@@ -235,6 +236,8 @@ ROBOTS_TXT = (
     "\n"
     "User-agent: *\n"
     "Allow: /\n"
+    "\n"
+    f"Sitemap: {absolute_url('/sitemap.xml')}\n"
 )
 
 
@@ -244,6 +247,23 @@ def robots_txt():
     """Block the AI crawlers by name; let search engines through to read
     each page's own index/noindex directive."""
     return ROBOTS_TXT
+
+
+@app.get("/sitemap.xml")
+@limiter.exempt
+def sitemap_xml():
+    """The indexable pages only: the article lists and the articles."""
+    urls = "".join(
+        f"<url><loc>{escape(absolute_url(path))}</loc>"
+        f"<lastmod>{modified.isoformat()}</lastmod></url>\n"
+        for path, modified in posts.sitemap_entries()
+    )
+    return Response(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{urls}</urlset>\n",
+        media_type="application/xml",
+    )
 
 
 @app.get("/health")
@@ -264,13 +284,21 @@ def health_check(db: Session = Depends(get_db)):
     return {"status": "ok", "database": "ok"}
 
 
+HOME_ROBOTS = "noindex, follow"
+
+
 @app.get("/")
 def home(request: Request):
-    """Landing page: intro, projects, and skills."""
+    """Landing page: intro, projects, and skills.
+
+    Stays out of the index like the rest of the site, but lets crawlers follow
+    its links, since it is the way in to the articles.
+    """
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"meta_title": "Jake Wang – Data Projects"},
+        headers={"X-Robots-Tag": HOME_ROBOTS},
+        context={"meta_title": "Jake Wang – Data Projects", "robots": HOME_ROBOTS},
     )
 
 

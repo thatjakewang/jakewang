@@ -5,9 +5,11 @@
     content       — page body
     extra_scripts — page-specific JS, loaded at the end of <body>
 
-  Views pass meta_title, and indexable=True on the pages search engines may
-  index (the articles). Jinja globals from app/templating.py:
-  static_url(), current_year().
+  Views pass meta_title, optionally meta_description and structured_data
+  (a dict rendered as JSON-LD), and indexable=True on
+  the pages search engines may index (the articles). A noindex page can pass
+  robots to replace the default directive. Jinja globals from
+  app/templating.py: static_url(), current_year(), absolute_url().
 #}
 <!DOCTYPE html>
 <html lang="en">
@@ -17,8 +19,15 @@
     <meta name="theme-color" content="#ffffff">
     {# Also sent as an X-Robots-Tag header (app/main.py); the tag is here too
        because it is what most crawlers and audit tools look at first.
-       Everything is noindex unless the view passes indexable (app/posts.py). #}
-    {% if not indexable %}<meta name="robots" content="noindex, nofollow">{% endif %}
+       Everything is noindex unless the view passes indexable (app/posts.py).
+       Indexable pages name their canonical URL instead, so a copy reached
+       through another hostname or with a query string isn't indexed twice. #}
+    {% if indexable %}<link rel="canonical" href="{{ absolute_url(request.url.path) }}">
+    {% else %}<meta name="robots" content="{{ robots | default('noindex, nofollow') }}">{% endif %}
+    {% if meta_description %}<meta name="description" content="{{ meta_description }}">{% endif %}
+    {# JSON-LD is data, not script, so the CSP's ban on inline scripts doesn't
+       apply. tojson escapes <, > and & so a title can't close the tag. #}
+    {% if structured_data %}<script type="application/ld+json">{{ structured_data | tojson }}</script>{% endif %}
     <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
     <title>{% block title %}{{ meta_title | default('Jake Wang') }}{% endblock %}</title>
     <script src="{{ static_url('js/nav.js') }}" defer></script>

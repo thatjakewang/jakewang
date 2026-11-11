@@ -30,6 +30,20 @@ def test_slug_and_tags_from_front_matter(tmp_path):
     assert post.tags == ("JavaScript", "CSS")
 
 
+def test_description_defaults_to_the_first_paragraph(tmp_path):
+    post = read(tmp_path, VALID, body="## Heading\n\nUse `a < b` & *save*.\n\nSecond.")
+    assert post.description == "Use a < b & save."
+
+
+def test_description_from_front_matter(tmp_path):
+    assert read(tmp_path, VALID + "\ndescription: Short summary.").description == "Short summary."
+
+
+def test_updated_defaults_to_the_publish_date(tmp_path):
+    assert read(tmp_path, VALID).updated == date(2026, 11, 4)
+    assert read(tmp_path, VALID + "\nupdated: 2026-11-10").updated == date(2026, 11, 10)
+
+
 def test_body_h1_is_detected(tmp_path):
     assert read(tmp_path, VALID, body="# Heading").has_title
 
@@ -40,6 +54,7 @@ def test_body_h1_is_detected(tmp_path):
     "title: A Post\ndate: someday\ncategory: kintone",          # bad date
     "title: A Post\ncategory: kintone",                         # no date
     VALID + "\nslug: Not A Slug!",
+    VALID + "\nupdated: 2026-11-01",                            # before the publish date
     VALID + "\ntags: JavaScript",                               # not a list
     "title: [unclosed",                                         # broken YAML
 ])

@@ -11,6 +11,7 @@ from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
 
+from app.config import get_settings
 from app.utils import get_today
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,6 +36,11 @@ _cached_static_version = lru_cache(maxsize=None)(_static_version)
 def static_url(filename: str) -> str:
     """/static URL plus ?v=<mtime>, which is what makes the long max-age safe."""
     return f"/static/{filename}?v={_cached_static_version(filename)}"
+
+
+def absolute_url(path: str) -> str:
+    """The path on the canonical origin (settings.site_url)."""
+    return f"{get_settings().site_url.rstrip('/')}{path}"
 
 
 def _format_number(value: float | int) -> str:
@@ -81,5 +87,6 @@ def current_year() -> int:
 
 templates.env.globals["static_url"] = static_url
 templates.env.globals["current_year"] = current_year
+templates.env.globals["absolute_url"] = absolute_url
 templates.env.filters["number"] = number
 templates.env.filters["money"] = money
