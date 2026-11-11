@@ -12,6 +12,7 @@ are rendered into the HTML rather than fetched by the browser.
 
 import logging
 from datetime import timedelta
+from urllib.parse import urlsplit
 from xml.sax.saxutils import escape
 
 from fastapi import Depends, FastAPI, Request
@@ -64,6 +65,29 @@ limiter = Limiter(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+
+class HeadAsGetMiddleware:
+    """Answer HEAD wherever GET is routed, with the same headers and no body.
+
+    FastAPI only registers the GET, so a HEAD got 405 and link checkers and
+    preview bots saw working pages as broken. The scope is copied rather than
+    edited, so the server still knows the request was a HEAD.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] != "HEAD":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_without_body(message):
+            if message["type"] == "http.response.body":
+                message = {**message, "body": b""}
+            await send(message)
+
+        await self.app({**scope, "method": "GET"}, receive, send_without_body)
 
 # How long browsers/proxies may cache public GET responses (seconds).
 # The page window is kept short because the dashboard's numbers are rendered
@@ -128,6 +152,16 @@ async def add_response_headers(request: Request, call_next):
     response = await call_next(request)
     set_security_headers(response)
 
+    # Starlette redirects /kintone to /kintone/ with a temporary 307. The
+    # slashed URL is the permanent address, so say so: search engines then
+    # move the link's weight to it instead of keeping both.
+    if (
+        response.status_code == 307
+        and request.method == "GET"
+        and urlsplit(response.headers.get("location", "")).path == f"{request.url.path}/"
+    ):
+        response.status_code = 308
+
     if (
         request.method == "GET"
         and response.status_code == 200
@@ -148,6 +182,11 @@ async def add_response_headers(request: Request, call_next):
             response.headers.setdefault("Cache-Control", f"public, max-age={max_age}")
 
     return response
+
+
+# Added after every other middleware, so it is outermost and all of them,
+# including the one above, see a GET.
+app.add_middleware(HeadAsGetMiddleware)
 
 
 @app.exception_handler(StarletteHTTPException)

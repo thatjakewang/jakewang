@@ -1,5 +1,5 @@
 ---
-title: How to Show Only Relevant Field Groups Based on a Workflow Status in Kintone Using JavaScript
+title: How to Show Kintone Field Groups by Workflow Status
 date: 2026-11-05
 category: kintone
 tags: [Process Management, Forms]
@@ -76,7 +76,7 @@ The last group in each `SHOWN` list is the current step, so that's the one this 
 
 Hiding a group only changes what's on screen. The fields keep their values, and anyone who can view the record can still see them in list views, exports and the REST API. For fields people mustn't see, use **Field Permissions** instead.
 
-To see how many records are at each status, see [How to Display a Status Summary Chart on a Kintone Record List Using JavaScript and Chart.js](/kintone/kintone-record-list-status-chart/).
+To see how many records are at each status, see [How to Add a Status Chart to a Kintone List With Chart.js](/kintone/kintone-record-list-status-chart/).
 
 **References**
 

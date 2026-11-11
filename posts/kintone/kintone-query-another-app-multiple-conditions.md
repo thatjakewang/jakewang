@@ -1,5 +1,5 @@
 ---
-title: How to Query Another Kintone App Using Multiple Conditions in JavaScript
+title: How to Query Another Kintone App With Multiple Conditions
 date: 2026-11-09
 category: kintone
 tags: [REST API, Queries]
@@ -8,7 +8,7 @@ slug: kintone-query-another-app-multiple-conditions
 
 You want records from another app that match more than one condition, for example a Customers record listing that customer's invoices that are unpaid and past their due date. The Get Records API takes a single query string, so you have to join the conditions with `and` or `or` in JavaScript.
 
-This builds on [How to Fetch Data From Another Kintone App Using JavaScript and the REST API](/kintone/kintone-fetch-data-from-another-app/), which uses the same two apps.
+This builds on [How to Fetch Data From Another Kintone App With JavaScript](/kintone/kintone-fetch-data-from-another-app/), which uses the same two apps.
 
 ## Join the conditions with `and`
 

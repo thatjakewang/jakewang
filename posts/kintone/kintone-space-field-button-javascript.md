@@ -63,7 +63,7 @@ To set it up:
 
 The date is formatted by hand because `toISOString()` uses UTC and can be a day off.
 
-A Blank space field can hold plain text too. See [How to Show Helper Text Below a Kintone Field Using JavaScript and CSS](/kintone/kintone-field-helper-text/).
+A Blank space field can hold plain text too. See [How to Add Helper Text Below a Kintone Field With JavaScript](/kintone/kintone-field-helper-text/).
 
 **References**
 

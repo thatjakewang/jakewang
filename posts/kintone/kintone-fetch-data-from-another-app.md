@@ -1,5 +1,5 @@
 ---
-title: How to Fetch Data From Another Kintone App Using JavaScript and the REST API
+title: How to Fetch Data From Another Kintone App With JavaScript
 date: 2026-11-09
 category: kintone
 tags: [REST API]
@@ -76,7 +76,7 @@ The handler stops early when `Customer_ID` is blank. Otherwise the query would b
 
 `textContent` sets the text as plain text, so the result can't be read as HTML.
 
-To fetch only some of the invoices, such as the unpaid ones, see [How to Query Another Kintone App Using Multiple Conditions in JavaScript](/kintone/kintone-query-another-app-multiple-conditions/).
+To fetch only some of the invoices, such as the unpaid ones, see [How to Query Another Kintone App With Multiple Conditions](/kintone/kintone-query-another-app-multiple-conditions/).
 
 ## Get one record by its ID
 

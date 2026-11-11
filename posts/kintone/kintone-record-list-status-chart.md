@@ -1,5 +1,5 @@
 ---
-title: How to Display a Status Summary Chart on a Kintone Record List Using JavaScript and Chart.js
+title: How to Add a Status Chart to a Kintone List With Chart.js
 date: 2026-11-05
 category: kintone
 tags: [List view, Process Management, Chart.js]
@@ -87,7 +87,7 @@ Chart.js has to come first so `Chart` exists when this file runs.
 
 `Status` is the field code of the status field, which isn't the same in every app, so check it in the form settings.
 
-To change what a record shows at each status, see [How to Show Only Relevant Field Groups Based on a Workflow Status in Kintone Using JavaScript](/kintone/kintone-workflow-field-groups/).
+To change what a record shows at each status, see [How to Show Kintone Field Groups by Workflow Status](/kintone/kintone-workflow-field-groups/).
 
 ## Other chart types
 

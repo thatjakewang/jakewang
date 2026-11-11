@@ -1,5 +1,5 @@
 ---
-title: How to Show Helper Text Below a Kintone Field Using JavaScript and CSS
+title: How to Add Helper Text Below a Kintone Field With JavaScript
 date: 2026-11-04
 category: kintone
 tags: [Forms, CSS]

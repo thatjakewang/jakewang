@@ -84,7 +84,7 @@ kintone.events.on(EVENTS, async (event) => {
 });
 ```
 
-Replace `12` with the other app's ID. If the request fails, the Promise is rejected and the save is cancelled. For more on the request, see [How to Fetch Data From Another Kintone App Using JavaScript and the REST API](/kintone/kintone-fetch-data-from-another-app/).
+Replace `12` with the other app's ID. If the request fails, the Promise is rejected and the save is cancelled. For more on the request, see [How to Fetch Data From Another Kintone App With JavaScript](/kintone/kintone-fetch-data-from-another-app/).
 
 ## Block a status change
 

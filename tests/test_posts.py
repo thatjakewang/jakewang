@@ -35,6 +35,13 @@ def test_description_defaults_to_the_first_paragraph(tmp_path):
     assert post.description == "Use a < b & save."
 
 
+def test_long_description_keeps_whole_sentences(tmp_path):
+    body = "One short sentence. " + "word " * 40 + "end."
+    assert read(tmp_path, VALID, body=body).description == "One short sentence."
+    cut = read(tmp_path, VALID, body="word " * 50).description
+    assert len(cut) <= 161 and cut.endswith("…")
+
+
 def test_description_from_front_matter(tmp_path):
     assert read(tmp_path, VALID + "\ndescription: Short summary.").description == "Short summary."
 

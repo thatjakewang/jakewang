@@ -81,7 +81,8 @@ The panel prints the reading dates it used.
 
 An article is a Markdown file under `posts/<category>/` with `title`, `date`
 and `category` in its front matter; `slug`, `tags`, `description` and
-`updated` are optional. The meta description defaults to the first paragraph.
+`updated` are optional. The meta description defaults to the opening sentences of the first
+paragraph, up to 160 characters.
 `updated` is the date of the last revision: it is shown beside the publish
 date and feeds the sitemap's `lastmod` and the JSON-LD `dateModified`. Categories
 are declared in `CATEGORIES` in `app/posts.py` (currently just `kintone`), and
@@ -93,7 +94,8 @@ The article list and article pages are the only indexable responses: their
 routes send `X-Robots-Tag: all` and pass `indexable` to the template, which
 drops the `noindex` meta tag and adds a canonical link and a meta description.
 Article pages also carry schema.org JSON-LD (`BlogPosting` and
-`BreadcrumbList`).
+`BreadcrumbList`), and indexable pages carry Open Graph tags for link
+previews. Every page has the Google Search Console verification tag.
 Everything else, including a 404 under `/kintone/`, keeps the site-wide
 `noindex, nofollow`, except the home page, which is `noindex, follow` so
 crawlers can reach the articles through it. Canonical links and the sitemap

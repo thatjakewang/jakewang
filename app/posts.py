@@ -28,10 +28,14 @@ from app.templating import BASE_DIR, absolute_url, templates
 logger = logging.getLogger(__name__)
 POSTS_DIR = BASE_DIR / "posts"
 CATEGORIES = {"kintone": "Kintone"}
-# Meta description for each category's list page.
+# Heading (<h1> and <title>) and meta description for each category's list
+# page. The short label above stays the name used in navigation and badges.
+CATEGORY_HEADINGS = {"kintone": "Kintone JavaScript Customization Guides"}
 CATEGORY_DESCRIPTIONS = {
     "kintone": "Short how-to posts on customizing Kintone apps with JavaScript and CSS.",
 }
+# Search results show roughly this many characters of a meta description.
+DESCRIPTION_LIMIT = 160
 # The articles are the one part of the site meant to be found by search. The
 # header overrides the site-wide noindex default set in app/main.py, and the
 # `indexable` context flag does the same for the <meta> tag in base.html.
@@ -61,12 +65,25 @@ class Post:
 
 
 def _first_paragraph(html: str) -> str:
-    """The first paragraph as plain text, for the meta description."""
+    """The first paragraph as plain text, for the meta description.
+
+    Kept to the leading sentences that fit in DESCRIPTION_LIMIT, so the
+    snippet ends on a full stop instead of being cut off by the search engine.
+    """
     match = re.search(r"<p>(.*?)</p>", html, re.DOTALL)
     if match is None:
         return ""
-    text = html_lib.unescape(re.sub(r"<[^>]+>", "", match.group(1)))
-    return " ".join(text.split())
+    text = " ".join(html_lib.unescape(re.sub(r"<[^>]+>", "", match.group(1))).split())
+    summary = ""
+    for sentence in re.split(r"(?<=[.!?])\s+", text):
+        if len(summary) + len(sentence) + 1 > DESCRIPTION_LIMIT:
+            break
+        summary = f"{summary} {sentence}".strip()
+    if summary:
+        return summary
+    if len(text) <= DESCRIPTION_LIMIT:
+        return text
+    return text[:DESCRIPTION_LIMIT].rsplit(" ", 1)[0] + "…"
 
 
 @lru_cache(maxsize=256)
@@ -185,9 +202,11 @@ def _category_router(category: str, label: str) -> APIRouter:
 
     @router.get("/", response_class=HTMLResponse, name=f"{category}_list")
     def post_list(request: Request):
+        heading = CATEGORY_HEADINGS.get(category, label)
         return templates.TemplateResponse(
             request=request, name="posts.html", headers=INDEXABLE_HEADERS,
-            context={"meta_title": f"{label} – Jake Wang", "category_label": label,
+            context={"meta_title": f"{heading} – Jake Wang", "category_label": label,
+                     "heading": heading,
                      "meta_description": CATEGORY_DESCRIPTIONS.get(category, ""),
                      "indexable": True,
                      "posts": [p for p in get_posts() if p.category == category]},
@@ -200,7 +219,10 @@ def _category_router(category: str, label: str) -> APIRouter:
             raise HTTPException(status_code=404)
         return templates.TemplateResponse(
             request=request, name="post.html", headers=INDEXABLE_HEADERS,
-            context={"meta_title": f"{post.title} – Jake Wang", "post": post,
+            # No site-name suffix: the title alone already fills what a
+            # search result shows.
+            context={"meta_title": post.title, "post": post,
+                     "og_type": "article",
                      "meta_description": post.description,
                      "structured_data": _structured_data(post, label),
                      "indexable": True,
