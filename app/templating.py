@@ -21,6 +21,8 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
+# stat() once per process; assets only change on redeploy, which restarts it.
+@lru_cache(maxsize=None)
 def _static_version(filename: str) -> int:
     """File mtime, used as the ?v= cache-buster. 0 when the file is missing."""
     try:
@@ -29,13 +31,9 @@ def _static_version(filename: str) -> int:
         return 0
 
 
-# stat() once per process; assets only change on redeploy, which restarts it.
-_cached_static_version = lru_cache(maxsize=None)(_static_version)
-
-
 def static_url(filename: str) -> str:
     """/static URL plus ?v=<mtime>, which is what makes the long max-age safe."""
-    return f"/static/{filename}?v={_cached_static_version(filename)}"
+    return f"/static/{filename}?v={_static_version(filename)}"
 
 
 def absolute_url(path: str) -> str:
@@ -94,9 +92,10 @@ def current_year() -> int:
     return get_today().year
 
 
-templates.env.globals["static_url"] = static_url
-templates.env.globals["current_year"] = current_year
-templates.env.globals["absolute_url"] = absolute_url
-templates.env.globals["share_image_url"] = share_image_url
-templates.env.filters["number"] = number
-templates.env.filters["money"] = money
+templates.env.globals.update(
+    static_url=static_url,
+    current_year=current_year,
+    absolute_url=absolute_url,
+    share_image_url=share_image_url,
+)
+templates.env.filters.update(number=number, money=money)
