@@ -87,6 +87,81 @@
     <p class="dashboard-note">Total cost covers the calendar period; distance and the per-km figures cover the span between the odometer readings shown above. Charged energy may not be consumed in the same period; longer views reduce timing noise, and only the 12-month view is sure to include each annual charge once.</p>
 </section>
 
+{# Stacked columns, one per month. Drawn with plain elements: each bar's
+   height is its share of the axis and its two segments split that height in
+   proportion, so it needs no script to render; static/js/tesla.js only adds the
+   hover readout. The table below it carries the same numbers. #}
+<section class="dashboard-section">
+    <h2 class="dashboard-section-title">Monthly Cost</h2>
+    <p class="dashboard-meta">Last 12 months · NT$ per calendar month</p>
+    {% if monthly_costs.axis_max %}
+    <div class="cost-chart">
+        <ul class="cost-legend">
+            <li><span class="cost-swatch cost-charging"></span>Charging</li>
+            <li><span class="cost-swatch cost-other"></span>Other costs</li>
+        </ul>
+        <div class="cost-plot">
+            {% for tick in monthly_costs.ticks %}
+            <div class="cost-gridline" style="bottom: {{ (tick.value / monthly_costs.axis_max * 100) | round(2) }}%"><span>{{ tick.label }}</span></div>
+            {% endfor %}
+            <div class="cost-columns">
+                {% for month in monthly_costs.months %}
+                <button type="button" class="cost-column"
+                        aria-label="{{ month.name }}: charging {{ month.charging_cost | money }}, other costs {{ month.non_charging_cost | money }}, total {{ month.total | money }}"
+                        data-month="{{ month.name }}" data-charging="{{ month.charging_cost | money }}"
+                        data-other="{{ month.non_charging_cost | money }}" data-total="{{ month.total | money }}">
+                    {% if month.total %}
+                    <span class="cost-bar" style="height: {{ (month.total / monthly_costs.axis_max * 100) | round(2) }}%">
+                        {% if month.charging_cost %}<span class="cost-segment cost-charging" style="flex-grow: {{ month.charging_cost }}"></span>{% endif %}
+                        {% if month.non_charging_cost %}<span class="cost-segment cost-other" style="flex-grow: {{ month.non_charging_cost }}"></span>{% endif %}
+                    </span>
+                    {% endif %}
+                </button>
+                {% endfor %}
+            </div>
+            <div class="cost-tooltip" aria-hidden="true" hidden>
+                <div class="cost-tooltip-month" data-readout="month"></div>
+                <div><span class="cost-key cost-charging"></span><strong data-readout="charging"></strong> Charging</div>
+                <div><span class="cost-key cost-other"></span><strong data-readout="other"></strong> Other costs</div>
+                <div class="cost-tooltip-total"><strong data-readout="total"></strong> Total</div>
+            </div>
+        </div>
+        <div class="cost-months" aria-hidden="true">
+            {% for month in monthly_costs.months %}
+            {# The .cost-wide parts drop out on narrow screens: "Dec 2025" becomes "D 25". #}
+            <span>{{ month.label[0] }}<span class="cost-wide">{{ month.label[1:] }}</span>
+                {%- if loop.first or month.label == "Jan" %}<small><span class="cost-wide">{{ (month.year | string)[:2] }}</span>{{ (month.year | string)[2:] }}</small>{% endif %}</span>
+            {% endfor %}
+        </div>
+    </div>
+    <details class="cost-table">
+        <summary>Show as a table</summary>
+        <table class="dashboard-table">
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th class="col-amount">Charging</th>
+                    <th class="col-amount">Other costs</th>
+                    <th class="col-amount">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for month in monthly_costs.months | reverse %}
+                <tr>
+                    <td>{{ month.label }} {{ month.year }}</td>
+                    <td class="col-amount">{{ month.charging_cost | money }}</td>
+                    <td class="col-amount">{{ month.non_charging_cost | money }}</td>
+                    <td class="col-amount">{{ month.total | money }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </details>
+    {% else %}
+    <p>No costs recorded in the last 12 months.</p>
+    {% endif %}
+</section>
+
 <section class="dashboard-section data-coverage" aria-labelledby="coverage-title">
     <h2 class="dashboard-section-title" id="coverage-title">Data Coverage</h2>
     <div class="coverage-grid">

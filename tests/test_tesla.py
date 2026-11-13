@@ -6,7 +6,9 @@ from fastapi import HTTPException
 
 from app import tesla
 from app.dependencies import verify_shortcut_api_key
-from app.tesla import OdometerReadingCreate, odometer_span, period_windows
+from app.tesla import (
+    OdometerReadingCreate, axis_ticks, month_starts, odometer_span, period_windows,
+)
 from app.utils import create_record, delete_latest_record
 
 
@@ -121,6 +123,54 @@ def test_period_summary_divides_span_costs_by_span_distance(monkeypatch):
     assert summary["trailing_365_days"]["km_driven"] is None
     assert summary["trailing_365_days"]["total_cost_per_km"] is None
     assert summary["trailing_365_days"]["measured_from"] is None
+
+
+def test_month_starts_cover_twelve_months_ending_with_this_one():
+    months = month_starts(date(2026, 3, 31))
+    assert len(months) == 12
+    assert (months[0], months[-1]) == (date(2025, 4, 1), date(2026, 3, 1))
+    assert months == sorted(months)
+
+
+@pytest.mark.parametrize("max_value, ticks", [
+    (0, [0]),
+    (7, [0, 2, 4, 6, 8]),
+    (999, [0, 500, 1000]),
+    (4200, [0, 2000, 4000, 6000]),
+    (30250, [0, 10000, 20000, 30000, 40000]),
+])
+def test_axis_ticks_are_round_and_reach_the_maximum(max_value, ticks):
+    assert axis_ticks(max_value) == ticks
+
+
+def test_monthly_costs_fill_empty_months_and_skip_future_ones(monkeypatch):
+    monkeypatch.setattr(tesla, "get_today", lambda: date(2026, 11, 10))
+    db = FakeSession([
+        SimpleNamespace(month="2026-11", kind="charging_cost", amount=760),
+        SimpleNamespace(month="2026-11", kind="non_charging_cost", amount=300),
+        SimpleNamespace(month="2026-03", kind="non_charging_cost", amount=28500),
+        SimpleNamespace(month="2026-12", kind="charging_cost", amount=99999),
+    ])
+    chart = tesla.get_monthly_costs(db)
+
+    months = chart["months"]
+    assert [m["month"] for m in months] == [
+        "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05",
+        "2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11",
+    ]
+    assert (months[-1]["label"], months[-1]["name"]) == ("Nov", "November 2026")
+    assert (months[-1]["charging_cost"], months[-1]["non_charging_cost"], months[-1]["total"]) == (760, 300, 1060)
+    assert months[3]["total"] == 28500
+    assert months[1]["total"] == 0
+    assert chart["axis_max"] == 30000
+    assert [tick["label"] for tick in chart["ticks"]] == ["0", "10K", "20K", "30K"]
+
+
+def test_monthly_costs_without_records_have_no_axis(monkeypatch):
+    monkeypatch.setattr(tesla, "get_today", lambda: date(2026, 11, 10))
+    chart = tesla.get_monthly_costs(FakeSession([]))
+    assert chart["axis_max"] == 0
+    assert len(chart["months"]) == 12
 
 
 def reading(km):

@@ -357,7 +357,7 @@ def tesla_dashboard(request: Request, db: Session = Depends(get_db)):
     """Tesla cost dashboard, rendered server-side in one DB session.
 
     tesla.get_dashboard() resolves every widget from one session, so the whole
-    page costs eleven queries and no HTTP round trip. Every period is rendered;
+    page costs twelve queries and no HTTP round trip. Every period is rendered;
     the period switch only changes which one is shown.
     """
     return templates.TemplateResponse(

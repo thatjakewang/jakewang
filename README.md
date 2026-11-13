@@ -58,18 +58,24 @@ schema.sql         # reference DDL for rebuilding the database
 ```
 
 The dashboard is rendered server-side: `/mytesla/` calls `get_dashboard()`,
-which resolves eleven queries in one session, and Jinja prints the numbers
+which resolves twelve queries in one session, and Jinja prints the numbers
 straight into the HTML. The page
 ships one small script of its own, `static/js/tesla.js` for the period
-switch; the only other script on the site is `static/js/nav.js` for the
+switch and the chart's hover readout; the only other script on the site is `static/js/nav.js` for the
 mobile menu. Nothing needs a redeploy when new
-records land, and nothing needs a second round trip either. It is KPI figures
-and tables only.
+records land, and nothing needs a second round trip either. It is KPI figures,
+tables and one chart.
 
 The period switch (`This month` / `Last 90 days` / `Last 12 months`) is a
 client-side toggle: `get_period_summary()` queries every window up front (plus
 the prior month for the comparison), all of them are rendered, and
 `static/js/tesla.js` only shows the selected one. The URL never changes.
+
+The Monthly Cost chart shows charging and other costs for the last twelve
+calendar months as stacked columns. It is plain HTML and CSS — the template
+sets each bar's height as a percentage — so it renders without JavaScript and
+needs no chart library, which the Content-Security-Policy would not load from
+another host anyway. The same numbers are in a table under the chart.
 
 A period's total cost covers its calendar window. Its distance and per-km
 figures cover the span between two odometer readings — the last one before the

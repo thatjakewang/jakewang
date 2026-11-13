@@ -14,6 +14,7 @@ All monetary values are stored as integers and kWh as floats. The id column
 (SERIAL) provides stable ordering for the recent-record queries.
 """
 
+import math
 from calendar import monthrange
 from datetime import date, timedelta
 from typing import Annotated
@@ -250,6 +251,85 @@ def get_period_summary(db: Session):
     return result
 
 
+def month_starts(today: date, count: int = 12) -> list[date]:
+    """The first day of each of the last `count` months, oldest first, ending
+    with the month `today` is in."""
+    months = [today.replace(day=1)]
+    while len(months) < count:
+        months.append((months[-1] - timedelta(days=1)).replace(day=1))
+    return months[::-1]
+
+
+def axis_ticks(max_value: float) -> list[int]:
+    """Round y-axis ticks from 0 up to the first one at or above max_value.
+
+    Steps are 1, 2 or 5 times a power of ten, chosen to give about four
+    intervals. Just [0] when there is nothing to plot.
+    """
+    if max_value <= 0:
+        return [0]
+    rough = max_value / 4
+    magnitude = 10 ** math.floor(math.log10(rough)) if rough >= 1 else 1
+    step = next(m * magnitude for m in (1, 2, 5, 10) if m * magnitude >= rough)
+    top = math.ceil(max_value / step) * step
+    return list(range(0, top + step, step))
+
+
+def compact_number(value: int) -> str:
+    """An axis label: 500, 1K, 2.5K. Whole thousands from 1,000 up."""
+    return f"{value / 1000:g}K" if value >= 1000 else str(value)
+
+
+def get_monthly_costs(db: Session):
+    """Charging and other costs for each of the last twelve calendar months.
+
+    Feeds the stacked column chart on the dashboard. A month with no records
+    is still returned, as zeros, so the chart keeps one column per month.
+    `ticks` are the y-axis ticks and `axis_max` the top one; it is 0 when the
+    whole window is empty, which the template takes as "nothing to draw".
+    """
+    months = month_starts(get_today())
+    rows = db.execute(text("""
+        SELECT to_char(charge_date, 'YYYY-MM') AS month,
+               'charging_cost' AS kind, SUM(amount) AS amount
+        FROM charging_records
+        WHERE charge_date >= :start_date
+        GROUP BY 1
+        UNION ALL
+        SELECT to_char(date, 'YYYY-MM'), 'non_charging_cost', SUM(amount)
+        FROM car_expenses
+        WHERE date >= :start_date
+        GROUP BY 1
+    """), {"start_date": months[0]})
+
+    costs = {
+        month.strftime("%Y-%m"): {"charging_cost": 0.0, "non_charging_cost": 0.0}
+        for month in months
+    }
+    for row in rows:
+        # A record dated after this month has no column; leave it out.
+        if row.month in costs:
+            costs[row.month][row.kind] = float(row.amount)
+
+    result = []
+    for month in months:
+        cost = costs[month.strftime("%Y-%m")]
+        result.append({
+            "month": month.strftime("%Y-%m"),
+            "label": month.strftime("%b"),
+            "name": month.strftime("%B %Y"),
+            "year": month.year,
+            **cost,
+            "total": cost["charging_cost"] + cost["non_charging_cost"],
+        })
+    ticks = axis_ticks(max(month["total"] for month in result))
+    return {
+        "months": result,
+        "ticks": [{"value": tick, "label": compact_number(tick)} for tick in ticks],
+        "axis_max": ticks[-1],
+    }
+
+
 def get_charging_by_provider(db: Session):
     """Return charging statistics grouped by provider (Supercharger, Home, etc.).
 
@@ -285,7 +365,7 @@ def get_recent_car_expenses(db: Session):
 
 
 def get_dashboard(db: Session):
-    """Return all dashboard data in eleven queries.
+    """Return all dashboard data in twelve queries.
 
     The page used to fetch this over HTTP, one request per widget before that.
     Now app/main.py calls it directly while rendering, so the whole dashboard
@@ -299,6 +379,7 @@ def get_dashboard(db: Session):
         "stats": get_stats(db),
         "data_coverage": get_data_coverage(db),
         "period_summary": get_period_summary(db),
+        "monthly_costs": get_monthly_costs(db),
         "charging_providers": get_charging_by_provider(db),
         "recent_charging": get_recent_charging_records(db),
         "recent_expenses": get_recent_car_expenses(db),

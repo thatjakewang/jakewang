@@ -25,6 +25,8 @@
     --subtle-bg: #fafafa;       /* zebra rows, hover/card backgrounds */
     --badge-bg: #fff4ed;        /* category and tag labels, text in --link-color */
     --badge-border: #fed7c3;
+    --series-charging: #2a78d6; /* chart series; text never wears these */
+    --series-other: #eb6834;
     --mono-font: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
     --container-width: 740px;
     --container-gutter: 20px;
@@ -54,7 +56,7 @@ a:hover {
 }
 
 /* Keyboard focus ring for the custom buttons */
-:is(.nav-toggle, .period-tab):focus-visible {
+:is(.nav-toggle, .period-tab, .cost-column):focus-visible {
     outline: 2px solid var(--heading-color);
     outline-offset: 2px;
 }
@@ -778,6 +780,195 @@ body.nav-open {
     .period-tabs {
         padding-bottom: 14px;
     }
+}
+
+/* Monthly Cost — stacked columns drawn with plain elements. Heights are
+   percentages of the plot, set inline by the template. */
+.cost-chart {
+    margin-bottom: 14px;
+}
+
+.cost-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin: 0 0 16px;
+    padding: 0;
+    list-style: none;
+    color: var(--muted-color);
+    font-size: 12px;
+}
+
+.cost-legend li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cost-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+
+.cost-charging {
+    background: var(--series-charging);
+}
+
+.cost-other {
+    background: var(--series-other);
+}
+
+/* The left margin is the gutter the tick labels sit in. */
+.cost-plot,
+.cost-months {
+    margin-left: 36px;
+}
+
+.cost-plot {
+    position: relative;
+    height: 200px;
+}
+
+.cost-gridline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.cost-gridline span {
+    position: absolute;
+    right: 100%;
+    margin-right: 8px;
+    transform: translateY(-50%);
+    color: var(--meta-color);
+    font-size: 11px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.cost-columns,
+.cost-months {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+}
+
+.cost-columns {
+    position: absolute;
+    inset: 0;
+}
+
+/* The whole slot is the hover and focus target, not just the bar. */
+.cost-column {
+    position: relative;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    cursor: default;
+}
+
+.cost-column:hover,
+.cost-column:focus-visible {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+/* The bar's height is the month's total; the segments share it in
+   proportion to their amounts. The 2px gap in the page colour that separates
+   them comes out of that height, so the bar stays true to the total. */
+.cost-bar {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+    width: min(24px, 64%);
+    overflow: hidden;
+    border-radius: 4px 4px 0 0;
+    transform: translateX(-50%);
+}
+
+.cost-segment {
+    flex-basis: 0;
+}
+
+.cost-months {
+    margin-top: 8px;
+    color: var(--meta-color);
+    font-size: 11px;
+    line-height: 1.3;
+    text-align: center;
+}
+
+.cost-months small {
+    display: block;
+    font-size: inherit;
+}
+
+@media (max-width: 480px) {
+    .cost-wide {
+        display: none;
+    }
+}
+
+.cost-tooltip {
+    position: absolute;
+    bottom: 100%;
+    z-index: 1;
+    margin-bottom: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--bg-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    color: var(--muted-color);
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translateX(-50%);
+}
+
+.cost-tooltip strong {
+    color: var(--heading-color);
+    font-weight: 600;
+}
+
+.cost-tooltip-month {
+    color: var(--heading-color);
+    font-weight: 600;
+}
+
+.cost-tooltip-total {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--border-color);
+}
+
+.cost-key {
+    display: inline-block;
+    width: 10px;
+    height: 2px;
+    margin-right: 6px;
+    border-radius: 1px;
+    vertical-align: middle;
+}
+
+.cost-table summary {
+    color: var(--muted-color);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.cost-table {
+    overflow-x: auto;
+}
+
+.cost-table .dashboard-table {
+    margin-top: 8px;
+    white-space: nowrap;
 }
 
 /* Data Coverage */
