@@ -27,9 +27,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.database import get_db
 from app import posts, tesla
-
+from app.database import get_db
 from app.templating import STATIC_DIR, absolute_url, templates
 
 logger = logging.getLogger(__name__)
@@ -66,6 +65,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+
 class HeadAsGetMiddleware:
     """Answer HEAD wherever GET is routed, with the same headers and no body.
 
@@ -88,6 +88,7 @@ class HeadAsGetMiddleware:
             await send(message)
 
         await self.app({**scope, "method": "GET"}, receive, send_without_body)
+
 
 # How long browsers/proxies may cache public GET responses (seconds).
 # The page window is kept short because the dashboard's numbers are rendered
@@ -141,14 +142,33 @@ def set_security_headers(response) -> None:
     response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
 
 
+def cache_max_age(request: Request, response) -> int | None:
+    """Seconds a response may be publicly cached, or None to leave it alone.
+
+    Only successful GETs qualify. Requests carrying x-api-key are never marked
+    publicly cacheable, since those responses are fetched with a personal key,
+    and neither is anything that set a cookie on its way out.
+    """
+    if (
+        request.method != "GET"
+        or response.status_code != 200
+        or "x-api-key" in request.headers
+        # Nothing sets a cookie today, but a response that ever does is by
+        # definition not shared-cacheable — keep the guard ahead of the need.
+        or "set-cookie" in response.headers
+    ):
+        return None
+    if request.url.path.startswith("/static/"):
+        return STATIC_CACHE_MAX_AGE
+    # Every HTML page: home, the dashboard, and the article pages.
+    if response.headers.get("content-type", "").startswith("text/html"):
+        return PAGE_CACHE_MAX_AGE
+    return None
+
+
 @app.middleware("http")
 async def add_response_headers(request: Request, call_next):
-    """Baseline security headers on everything, plus per-kind Cache-Control.
-
-    Requests carrying x-api-key are never marked publicly cacheable, since
-    those responses are fetched with a personal key, and neither is anything
-    that set a cookie on its way out.
-    """
+    """Baseline security headers on everything, plus per-kind Cache-Control."""
     response = await call_next(request)
     set_security_headers(response)
 
@@ -162,24 +182,9 @@ async def add_response_headers(request: Request, call_next):
     ):
         response.status_code = 308
 
-    if (
-        request.method == "GET"
-        and response.status_code == 200
-        and "x-api-key" not in request.headers
-        # Nothing sets a cookie today, but a response that ever does is by
-        # definition not shared-cacheable — keep the guard ahead of the need.
-        and "set-cookie" not in response.headers
-    ):
-        path = request.url.path
-        if path.startswith("/static/"):
-            max_age = STATIC_CACHE_MAX_AGE
-        # Every HTML page: home, the dashboard, and the article pages.
-        elif response.headers.get("content-type", "").startswith("text/html"):
-            max_age = PAGE_CACHE_MAX_AGE
-        else:
-            max_age = None
-        if max_age is not None:
-            response.headers.setdefault("Cache-Control", f"public, max-age={max_age}")
+    max_age = cache_max_age(request, response)
+    if max_age is not None:
+        response.headers.setdefault("Cache-Control", f"public, max-age={max_age}")
 
     return response
 
@@ -189,6 +194,22 @@ async def add_response_headers(request: Request, call_next):
 app.add_middleware(HeadAsGetMiddleware)
 
 
+def is_api_request(request: Request) -> bool:
+    """API clients get JSON errors; everything else gets the HTML error page."""
+    return request.url.path.startswith("/api/")
+
+
+def error_page(request: Request, status_code: int, headers: dict | None = None):
+    """The site's HTML error page for one of the ERROR_PAGES status codes."""
+    return templates.TemplateResponse(
+        request=request,
+        name="error.html",
+        status_code=status_code,
+        context={"code": status_code, "message": ERROR_PAGES[status_code]},
+        headers=headers,
+    )
+
+
 @app.exception_handler(StarletteHTTPException)
 async def html_error_handler(request: Request, exc: StarletteHTTPException):
     """Friendly HTML error pages for page requests; JSON for the API.
@@ -196,15 +217,10 @@ async def html_error_handler(request: Request, exc: StarletteHTTPException):
     Without this, a mistyped URL would return FastAPI's bare JSON detail
     instead of the site's 404 page.
     """
-    if request.url.path.startswith("/api/") or exc.status_code not in ERROR_PAGES:
+    if is_api_request(request) or exc.status_code not in ERROR_PAGES:
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
-    return templates.TemplateResponse(
-        request=request,
-        name="error.html",
-        status_code=exc.status_code,
-        context={"code": exc.status_code, "message": ERROR_PAGES[exc.status_code]},
-    )
+    return error_page(request, exc.status_code)
 
 
 @app.exception_handler(Exception)
@@ -217,20 +233,14 @@ async def unhandled_error_handler(request: Request, exc: Exception):
         exc_info=(type(exc), exc, exc.__traceback__),
     )
     headers = {"Cache-Control": "no-store"}
-    if request.url.path.startswith("/api/"):
+    if is_api_request(request):
         response = JSONResponse(
             status_code=500,
             content={"detail": ERROR_PAGES[500]},
             headers=headers,
         )
     else:
-        response = templates.TemplateResponse(
-            request=request,
-            name="error.html",
-            status_code=500,
-            context={"code": 500, "message": ERROR_PAGES[500]},
-            headers=headers,
-        )
+        response = error_page(request, 500, headers)
     # This handler runs outside the middleware above, so set them here too.
     set_security_headers(response)
     return response
