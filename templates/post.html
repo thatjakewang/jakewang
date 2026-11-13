@@ -1,13 +1,20 @@
 {% extends "base.html" %}
+
+{% macro time_tag(day) %}<time datetime="{{ day.isoformat() }}">{{ day.isoformat() }}</time>{% endmacro %}
+
 {% block content %}
 <article class="post-page">
     <a href="{{ category_url }}">← {{ category_label }}</a>
-    <p class="post-meta"><time datetime="{{ post.date.isoformat() }}">{{ post.date.isoformat() }}</time>
-        {%- if post.updated != post.date %} · Updated <time datetime="{{ post.updated.isoformat() }}">{{ post.updated.isoformat() }}</time>{% endif %}</p>
+    <p class="post-meta">{{ time_tag(post.date) }}
+        {%- if post.updated != post.date %} · Updated {{ time_tag(post.updated) }}{% endif %}</p>
     {% if not post.has_title %}<h1>{{ post.title }}</h1>{% endif %}
-    {% if post.authors %}<p class="post-meta">Authors: {{ post.authors | join(', ') }}</p>{% endif %}
-    {% if post.venue %}<p class="post-meta">Venue: {{ post.venue }}</p>{% endif %}
-    {% if post.doi %}<p class="post-meta">DOI: {{ post.doi }}</p>{% endif %}
+    {% for label, value in [
+        ("Authors", post.authors | join(', ')),
+        ("Venue", post.venue),
+        ("DOI", post.doi),
+    ] if value %}
+    <p class="post-meta">{{ label }}: {{ value }}</p>
+    {% endfor %}
     <div class="post-content">{{ post.html }}</div>
     {% if related %}
     <nav class="related-posts" aria-label="Related posts">
