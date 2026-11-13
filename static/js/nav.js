@@ -5,8 +5,12 @@
     if (!header || !toggle) return;
     var content = document.querySelector(".container");
 
+    function isOpen() {
+        return header.classList.contains("is-open");
+    }
+
     function setOpen(open, restoreFocus) {
-        var wasOpen = header.classList.contains("is-open");
+        var wasOpen = isOpen();
         header.classList.toggle("is-open", open);
         document.body.classList.toggle("nav-open", open);
         toggle.setAttribute("aria-expanded", open ? "true" : "false");
@@ -15,28 +19,33 @@
         if (open || (wasOpen && restoreFocus)) toggle.focus();
     }
 
+    // Keep Tab inside the open menu: wrap from the last control to the first
+    // and back.
+    function trapFocus(e) {
+        var controls = Array.from(header.querySelectorAll("a[href], button:not([disabled])"))
+            .filter(function (el) { return el.getClientRects().length > 0; });
+        var first = controls[0];
+        var last = controls[controls.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
+    }
+
     toggle.addEventListener("click", function () {
-        setOpen(!header.classList.contains("is-open"));
+        setOpen(!isOpen());
     });
 
     document.addEventListener("keydown", function (e) {
-        if (!header.classList.contains("is-open")) return;
+        if (!isOpen()) return;
         if (e.key === "Escape") {
             e.preventDefault();
             setOpen(false, true);
-        }
-        if (e.key === "Tab") {
-            var links = Array.from(header.querySelectorAll("a[href], button:not([disabled])"))
-                .filter(function (el) { return el.getClientRects().length > 0; });
-            var first = links[0];
-            var last = links[links.length - 1];
-            if (e.shiftKey && document.activeElement === first) {
-                e.preventDefault();
-                last.focus();
-            } else if (!e.shiftKey && document.activeElement === last) {
-                e.preventDefault();
-                first.focus();
-            }
+        } else if (e.key === "Tab") {
+            trapFocus(e);
         }
     });
 
@@ -45,11 +54,9 @@
         link.addEventListener("click", function () { setOpen(false); });
     });
 
-    // If the viewport grows past the mobile breakpoint, force-close.
-    if (window.matchMedia) {
-        var mq = window.matchMedia("(min-width: 721px)");
-        var onChange = function (e) { if (e.matches) setOpen(false); };
-        if (mq.addEventListener) mq.addEventListener("change", onChange);
-        else if (mq.addListener) mq.addListener(onChange);
-    }
+    // If the viewport grows past the mobile breakpoint (720px in style.css),
+    // force-close.
+    window.matchMedia("(min-width: 721px)").addEventListener("change", function (e) {
+        if (e.matches) setOpen(false);
+    });
 })();
