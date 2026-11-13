@@ -33,7 +33,9 @@ from app.utils import (
     serialize_row,
 )
 
-router = APIRouter()
+# Every route here is a write, so the key check sits on the router: a new
+# endpoint is protected without having to remember to ask for it.
+router = APIRouter(dependencies=[Depends(verify_shortcut_api_key)])
 RecordLabel = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 
 
@@ -58,6 +60,17 @@ class OdometerReadingCreate(BaseModel):
     # get_today (not date.today) so the default respects APP_TIMEZONE, matching
     # every other date computation in the app (server clock runs on UTC).
     reading_date: date = Field(default_factory=get_today)
+
+
+# The columns each table shows on the dashboard and echoes back from an undo.
+CHARGING_COLUMNS = "charge_date, provider, amount, kwh"
+EXPENSE_COLUMNS = "date, item, amount"
+ODOMETER_COLUMNS = "reading_km, reading_date"
+
+
+def _ratio(amount: float, divisor: float | None, empty=None):
+    """amount / divisor to two decimals, or `empty` with nothing to divide by."""
+    return round(amount / divisor, 2) if divisor else empty
 
 
 def get_latest_odometer(db: Session) -> int:
@@ -93,24 +106,17 @@ def get_stats(db: Session):
     energy_kwh = float(totals["energy_kwh"])
 
     total_cost = car_expense_total + charging_cost
-    avg_price_per_kwh = round(charging_cost / energy_kwh, 2) if energy_kwh else 0
-
     odometer_km = get_latest_odometer(db)
-    cost_per_km = round(total_cost / odometer_km, 2) if odometer_km else 0
 
     return {
         "total_cost": total_cost,
         "charging_cost": charging_cost,
         "non_charging_cost": car_expense_total,
-        "avg_price_per_kwh": avg_price_per_kwh,
+        "avg_price_per_kwh": _ratio(charging_cost, energy_kwh, empty=0),
         "odometer_km": odometer_km,
-        "cost_per_km": cost_per_km,
-        "charging_cost_per_km": (
-            round(charging_cost / odometer_km, 2) if odometer_km else 0
-        ),
-        "non_charging_cost_per_km": (
-            round(car_expense_total / odometer_km, 2) if odometer_km else 0
-        ),
+        "cost_per_km": _ratio(total_cost, odometer_km, empty=0),
+        "charging_cost_per_km": _ratio(charging_cost, odometer_km, empty=0),
+        "non_charging_cost_per_km": _ratio(car_expense_total, odometer_km, empty=0),
     }
 
 
@@ -227,8 +233,8 @@ def get_period_summary(db: Session):
             "km_driven": km,
             "measured_from": span_from.isoformat() if km else None,
             "measured_to": span_to.isoformat() if km else None,
-            "energy_cost_per_km": round(span_charging_cost / km, 2) if km else None,
-            "total_cost_per_km": round(span_total_cost / km, 2) if km else None,
+            "energy_cost_per_km": _ratio(span_charging_cost, km),
+            "total_cost_per_km": _ratio(span_total_cost, km),
             "kwh_per_100km": (
                 round(float(row["span_energy_kwh"]) / km * 100, 1) if km else None
             ),
@@ -270,15 +276,12 @@ def get_charging_by_provider(db: Session):
 
 def get_recent_charging_records(db: Session):
     """Return the 10 most recent charging records (newest first)."""
-    return fetch_recent(
-        db, "charging_records", "charge_date, provider, amount, kwh",
-        order_col="charge_date",
-    )
+    return fetch_recent(db, "charging_records", CHARGING_COLUMNS, order_col="charge_date")
 
 
 def get_recent_car_expenses(db: Session):
     """Return the 10 most recent car expense records (newest first)."""
-    return fetch_recent(db, "car_expenses", "date, item, amount")
+    return fetch_recent(db, "car_expenses", EXPENSE_COLUMNS)
 
 
 def get_dashboard(db: Session):
@@ -303,11 +306,7 @@ def get_dashboard(db: Session):
 
 
 @router.post("/charging-records")
-def create_charging_record(
-    payload: ChargingRecordCreate,
-    db: Session = Depends(get_db),
-    _: None = Depends(verify_shortcut_api_key),
-):
+def create_charging_record(payload: ChargingRecordCreate, db: Session = Depends(get_db)):
     """Insert a new charging record (protected by x-api-key).
 
     Used by iPhone Shortcuts or other trusted clients to log a charge session.
@@ -316,11 +315,7 @@ def create_charging_record(
 
 
 @router.post("/car-expenses")
-def create_car_expense(
-    payload: CarExpenseCreate,
-    db: Session = Depends(get_db),
-    _: None = Depends(verify_shortcut_api_key),
-):
+def create_car_expense(payload: CarExpenseCreate, db: Session = Depends(get_db)):
     """Insert a new car expense record (protected by x-api-key).
 
     Used by Shortcuts etc. to log one-off car costs (tires, insurance, etc.).
@@ -329,11 +324,7 @@ def create_car_expense(
 
 
 @router.post("/odometer")
-def create_odometer_reading(
-    payload: OdometerReadingCreate,
-    db: Session = Depends(get_db),
-    _: None = Depends(verify_shortcut_api_key),
-):
+def create_odometer_reading(payload: OdometerReadingCreate, db: Session = Depends(get_db)):
     """Log a total-odometer reading (protected by x-api-key).
 
     reading_km is the cumulative number shown on the Tesla screen; the
@@ -363,35 +354,22 @@ def create_odometer_reading(
 
 
 @router.delete("/charging-records/latest")
-def delete_latest_charging_record(
-    db: Session = Depends(get_db),
-    _: None = Depends(verify_shortcut_api_key),
-):
+def delete_latest_charging_record(db: Session = Depends(get_db)):
     """Delete the most recently logged charging record (protected by x-api-key)."""
     return delete_latest_record(
-        db, "charging_records", "charge_date, provider, amount, kwh",
-        "Charging record deleted",
+        db, "charging_records", CHARGING_COLUMNS, "Charging record deleted"
     )
 
 
 @router.delete("/car-expenses/latest")
-def delete_latest_car_expense(
-    db: Session = Depends(get_db),
-    _: None = Depends(verify_shortcut_api_key),
-):
+def delete_latest_car_expense(db: Session = Depends(get_db)):
     """Delete the most recently logged car expense (protected by x-api-key)."""
-    return delete_latest_record(
-        db, "car_expenses", "date, item, amount", "Car expense deleted"
-    )
+    return delete_latest_record(db, "car_expenses", EXPENSE_COLUMNS, "Car expense deleted")
 
 
 @router.delete("/odometer/latest")
-def delete_latest_odometer_reading(
-    db: Session = Depends(get_db),
-    _: None = Depends(verify_shortcut_api_key),
-):
+def delete_latest_odometer_reading(db: Session = Depends(get_db)):
     """Delete the most recently logged odometer reading (protected by x-api-key)."""
     return delete_latest_record(
-        db, "odometer_readings", "reading_km, reading_date",
-        "Odometer reading deleted",
+        db, "odometer_readings", ODOMETER_COLUMNS, "Odometer reading deleted"
     )

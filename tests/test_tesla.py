@@ -130,7 +130,7 @@ def reading(km):
 def test_odometer_reading_below_an_earlier_one_is_refused():
     db = FakeSession({"floor_km": 23000, "ceiling_km": None})
     with pytest.raises(HTTPException) as exc:
-        tesla.create_odometer_reading(reading(2312), db=db, _=None)
+        tesla.create_odometer_reading(reading(2312), db=db)
     assert exc.value.status_code == 422
     assert db.commits == 0
 
@@ -138,13 +138,13 @@ def test_odometer_reading_below_an_earlier_one_is_refused():
 def test_odometer_reading_above_a_later_one_is_refused():
     db = FakeSession({"floor_km": 23000, "ceiling_km": 23500})
     with pytest.raises(HTTPException) as exc:
-        tesla.create_odometer_reading(reading(231200), db=db, _=None)
+        tesla.create_odometer_reading(reading(231200), db=db)
     assert exc.value.status_code == 422
 
 
 def test_odometer_reading_in_range_is_inserted():
     db = FakeSession({"floor_km": 23000, "ceiling_km": None}, None, {"id": 7})
-    response = tesla.create_odometer_reading(reading(23120), db=db, _=None)
+    response = tesla.create_odometer_reading(reading(23120), db=db)
     assert response["data"] == {"id": 7, "reading_km": 23120, "reading_date": "2026-11-10"}
     assert db.commits == 1
 

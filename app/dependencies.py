@@ -1,8 +1,9 @@
 """Shared FastAPI dependencies.
 
-Only the API key check, used by the three write endpoints in app/tesla.py. It
-sits apart from them because it is the site's single credential, not a detail
-of logging a charge — the place to look when asking "what is protected here".
+Only the API key check, which the router in app/tesla.py applies to every one
+of its endpoints. It sits apart from them because it is the site's single
+credential, not a detail of logging a charge — the place to look when asking
+"what is protected here".
 """
 
 import secrets
