@@ -20,6 +20,9 @@
 </div>
 {% endmacro %}
 
+{# Row count under a table heading: "1 latest charge", "3 latest charges". #}
+{% macro latest_count(rows, noun) %}{{ rows | length }} latest {{ noun }}{{ "" if rows | length == 1 else "s" }}{% endmacro %}
+
 {% block content %}
 <section class="intro">
     <h1>Tesla Cost Tracker</h1>
@@ -87,15 +90,19 @@
 <section class="dashboard-section data-coverage" aria-labelledby="coverage-title">
     <h2 class="dashboard-section-title" id="coverage-title">Data Coverage</h2>
     <div class="coverage-grid">
-        <p><span>Charging records</span><strong>Since {{ data_coverage.charging_start_date or "No records" }}</strong></p>
-        <p><span>Expense records</span><strong>Since {{ data_coverage.expenses_start_date or "No records" }}</strong></p>
-        <p><span>Odometer records</span><strong>Since {{ data_coverage.odometer_start_date or "No records" }}</strong></p>
+        {% for kind, start_date in [
+            ("Charging", data_coverage.charging_start_date),
+            ("Expense", data_coverage.expenses_start_date),
+            ("Odometer", data_coverage.odometer_start_date),
+        ] %}
+        <p><span>{{ kind }} records</span><strong>Since {{ start_date or "No records" }}</strong></p>
+        {% endfor %}
     </div>
 </section>
 
 <section class="dashboard-section">
     <h2 class="dashboard-section-title">Recent Charging Sessions</h2>
-    <p class="dashboard-meta">{{ recent_charging | length }} latest charge{{ "" if recent_charging | length == 1 else "s" }}</p>
+    <p class="dashboard-meta">{{ latest_count(recent_charging, "charge") }}</p>
     {% if recent_charging %}
     <table class="dashboard-table">
         <thead>
@@ -124,7 +131,7 @@
 
 <section class="dashboard-section">
     <h2 class="dashboard-section-title">Recent Car Expenses</h2>
-    <p class="dashboard-meta">{{ recent_expenses | length }} latest record{{ "" if recent_expenses | length == 1 else "s" }}</p>
+    <p class="dashboard-meta">{{ latest_count(recent_expenses, "record") }}</p>
     {% if recent_expenses %}
     <table class="dashboard-table">
         <thead>
