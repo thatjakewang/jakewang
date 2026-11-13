@@ -5,73 +5,6 @@
    block. Mobile breakpoints sit next to the components they adjust rather
    than in a separate responsive section. */
 
-/* Markdown articles and category lists */
-.post-list { list-style: none; padding: 0; }
-.post-list li { padding: 12px 0; }
-.post-list h2 { margin: 8px 0 0; padding: 0; border: 0; font-size: 1rem; font-weight: normal; }
-.post-list h2 a { color: #337ab7; text-decoration: none; }
-.post-meta, .post-list time { color: var(--meta-color); font-size: 0.9rem; }
-.post-badge {
-    margin-left: 8px; padding: 1px 8px; border: 1px solid var(--badge-border); border-radius: 999px;
-    background: var(--badge-bg); color: var(--link-color); font-size: 0.8rem;
-}
-.post-page, .post-list { overflow-wrap: anywhere; }
-.related-posts { margin-top: 3rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color); }
-.related-posts h2 { font-size: 1.1rem; }
-.post-content h1 { font-size: 2.2rem;}
-.post-content h2 { margin-top: 2.5rem; }
-.post-content h3 { margin-top: 1.75rem; }
-.post-content blockquote {
-    margin: 1.5rem 0;
-    padding: 0.25rem 1.25rem;
-    border-left: 3px solid var(--link-color);
-    color: var(--muted-color);
-}
-.post-content pre {
-    overflow-x: auto;
-    padding: 1rem 1.35rem;
-    border: 1.5px solid var(--code-block-border);
-    border-radius: 0.3rem;
-    background: var(--code-block-bg);
-    color: var(--code-block-fg);
-    font-size: 0.875rem;
-    line-height: 1.65;
-}
-.post-content code { font-family: var(--mono-font); font-size: 0.9em; }
-.post-content :is(li, p) code {
-    padding: 0.2em 0.4em;
-    margin-inline: 0.1em;
-    border-radius: 2px;
-    background: var(--code-inline-bg);
-    font-size: 0.875rem;
-}
-.post-content pre code { font-size: inherit; }
-.post-content pre ::selection { background: #3392ff44; }
-
-/* Pygments token classes, colored with the GitHub Dark palette */
-.codehilite :is(.c, .c1, .cm, .ch, .cs, .cp, .cpf) { color: #6a737d; }
-.codehilite :is(.k, .kd, .kn, .kr, .kp, .kt, .o, .ow) { color: #f97583; }
-.codehilite :is(.kc, .nb, .bp, .m, .mf, .mh, .mi, .mo, .il, .no, .nv) { color: #79b8ff; }
-.codehilite :is(.nf, .fm, .nc, .na, .nd) { color: #b392f0; }
-.codehilite :is(.s, .s1, .s2, .sa, .sb, .sc, .sd, .se, .sh, .si, .sr, .ss, .sx, .dl) { color: #9ecbff; }
-.codehilite .nt { color: #85e89d; }
-.codehilite .err { color: #fdaeb7; }
-.post-content table {
-    display: block;
-    max-width: 100%;
-    overflow-x: auto;
-    border-collapse: collapse;
-    margin: 1.5rem 0;
-    font-size: 0.95rem;
-}
-.post-content th, .post-content td {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border-color);
-}
-.post-content th { background: var(--subtle-bg); }
-.post-content img { max-width: 100%; height: auto; }
-.post-content hr { border: 0; border-top: 1px solid var(--border-color); margin: 2rem 0; }
-
 /* =========================================
    1. CSS Variables
    ========================================= */
@@ -82,7 +15,7 @@
     --link-color: #c2410c;      /* accessible orange */
     --link-hover: #9a3412;
     --border-color: #eeeeee;    /* divider */
-    --code-border: #e1e4e8;
+    --border-strong: #e1e4e8;   /* pill outlines, accent rules */
     --code-block-bg: #212432;
     --code-block-border: #1b1f23;
     --code-block-fg: #e1e4e8;
@@ -107,7 +40,6 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
-    padding: 0;
 }
 
 a {
@@ -121,8 +53,63 @@ a:hover {
     text-decoration: underline;
 }
 
+/* Keyboard focus ring for the custom buttons */
+:is(.nav-toggle, .period-tab):focus-visible {
+    outline: 2px solid var(--heading-color);
+    outline-offset: 2px;
+}
+
 /* =========================================
-   3. Layout
+   3. Typography (Global)
+   ========================================= */
+h1, h2, h3 {
+    color: var(--heading-color);
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+h1 {
+    font-size: 2.8rem;
+    margin-bottom: 10px;
+    letter-spacing: -1px;
+}
+
+h2 {
+    font-size: 1.8rem;
+    margin-top: 50px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+h3 {
+    font-size: 1.4rem;
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+p {
+    margin-bottom: 1.5em;
+    font-size: 1.05rem;
+}
+
+.subtitle {
+    font-size: 1.3rem;
+    color: var(--muted-color);
+    font-weight: 300;
+    margin-top: -5px;
+    margin-bottom: 16px;
+}
+
+.intro-bio {
+    font-size: 1rem;
+    max-width: 60ch;
+    margin-top: 0;
+    margin-bottom: 30px;
+}
+
+/* =========================================
+   4. Layout
    ========================================= */
 .container {
     max-width: var(--container-width); /* optimal reading width */
@@ -130,8 +117,23 @@ a:hover {
     padding: 36px var(--container-gutter) 40px;
 }
 
+@media (max-width: 720px) {
+    .container {
+        padding-top: 28px;
+    }
+}
+
+footer {
+    margin-top: 100px;
+    border-top: 1px solid var(--border-color);
+    padding: 30px 0 40px;
+    color: var(--meta-color);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
 /* =========================================
-   4. Header & Navigation
+   5. Header & Navigation
    Full-bleed sticky bar (x.ai-style shell, light theme).
    Desktop: horizontal nav.
    Mobile (≤720px): hamburger → full-viewport menu.
@@ -164,7 +166,6 @@ a:hover {
     font-weight: 650;
     letter-spacing: -0.02em;
     color: var(--heading-color);
-    text-decoration: none;
     line-height: 1;
 }
 
@@ -199,7 +200,6 @@ a:hover {
     font-size: 0.9rem;
     font-weight: 300; /* light / thin on desktop and mobile, x.ai-style */
     letter-spacing: -0.01em;
-    text-decoration: none;
     line-height: 1;
     padding: 6px 0;
     transition: color 0.15s ease, opacity 0.15s ease;
@@ -228,8 +228,7 @@ a:hover {
     letter-spacing: -0.01em;
     line-height: 1;
     color: var(--heading-color);
-    text-decoration: none;
-    border: 1px solid var(--code-border);
+    border: 1px solid var(--border-strong);
     border-radius: 999px;
     background: var(--bg-color);
     transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
@@ -263,11 +262,6 @@ a:hover {
     background: var(--subtle-bg);
 }
 
-.nav-toggle:focus-visible {
-    outline: 2px solid var(--heading-color);
-    outline-offset: 2px;
-}
-
 .nav-toggle-bar {
     display: block;
     width: 18px;
@@ -297,12 +291,11 @@ body.nav-open {
 
 /* Mobile: full-viewport menu (x.ai-style), not a short dropdown */
 @media (max-width: 720px) {
+    /* Top bar only; the panel is laid out separately when open */
     .site-header-inner {
         gap: 12px;
         padding: 10px var(--container-gutter);
         min-height: 52px;
-        /* Top bar only; the panel is laid out separately when open */
-        flex-wrap: nowrap;
     }
 
     .logo {
@@ -345,7 +338,7 @@ body.nav-open {
         width: 100%;
         height: 100%;
         min-height: 0;
-        padding: 10px 20px 28px;
+        padding: 10px var(--container-gutter) 28px;
         box-sizing: border-box;
     }
 
@@ -353,7 +346,7 @@ body.nav-open {
     .site-header.is-open .logo {
         position: absolute;
         top: calc(10px + env(safe-area-inset-top, 0px));
-        left: 20px;
+        left: var(--container-gutter);
         z-index: 2;
         line-height: 40px; /* align with 40px toggle */
     }
@@ -393,26 +386,20 @@ body.nav-open {
         display: block;
         /* ~16px — product-nav scale like x.ai, not display/hero size */
         font-size: 1rem;
-        letter-spacing: -0.01em;
         line-height: 1.35;
         padding: 10px 2px;
-        border-bottom: none;
-        color: var(--heading-color);
     }
 
+    /* Hover fades instead of darkening; non-active links stay dimmed so the
+       current page reads as primary */
     .nav-link:hover {
+        color: var(--muted-color);
         opacity: 0.55;
-        background: transparent;
     }
 
     .nav-link.is-active {
         color: var(--heading-color);
         opacity: 1;
-    }
-
-    /* Dim non-active links slightly so the current page reads as primary */
-    .site-header.is-open .nav-link:not(.is-active) {
-        color: var(--muted-color);
     }
 
     .header-cta {
@@ -424,61 +411,6 @@ body.nav-open {
         font-weight: 400;
         border-radius: 12px;
     }
-
-    .container {
-        padding-top: 28px;
-    }
-}
-
-/* =========================================
-   5. Typography (Global)
-   ========================================= */
-h1, h2, h3 {
-    color: var(--heading-color);
-    font-weight: 700;
-    line-height: 1.3;
-}
-
-h1 {
-    font-size: 2.8rem;
-    margin-bottom: 10px;
-    letter-spacing: -1px;
-}
-
-h2 {
-    font-size: 1.8rem;
-    margin-top: 50px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 10px;
-}
-
-h3 {
-    font-size: 1.4rem;
-    margin-top: 30px;
-    margin-bottom: 15px;
-}
-
-p {
-    margin-bottom: 1.5em;
-    font-size: 1.05rem;
-}
-
-.subtitle {
-    font-size: 1.3rem;
-    color: var(--muted-color);
-    font-weight: 300;
-    margin-top: -5px;
-    margin-bottom: 16px;
-}
-
-.intro-bio {
-    color: var(--text-color);
-    font-size: 1rem;
-    line-height: 1.7;
-    max-width: 60ch;
-    margin-top: 0;
-    margin-bottom: 30px;
 }
 
 /* =========================================
@@ -543,7 +475,6 @@ p {
 
 .skill-group dd {
     margin: 0;
-    color: var(--text-color);
     font-size: 16px;
     line-height: 1.6;
 }
@@ -553,21 +484,164 @@ p {
         flex-direction: column;
         gap: 4px;
     }
+
     .skill-group dt {
         flex: none;
     }
 }
+
 /* =========================================
-   7. Footer
+   7. Articles (Markdown posts and category lists)
    ========================================= */
-footer {
-    margin-top: 100px;
-    border-top: 1px solid var(--border-color);
-    padding-top: 30px;
+.post-page,
+.post-list {
+    overflow-wrap: anywhere;
+}
+
+.post-meta,
+.post-list time {
     color: var(--meta-color);
     font-size: 0.9rem;
-    text-align: center;
-    padding-bottom: 40px;
+}
+
+/* Category list */
+.post-list {
+    list-style: none;
+    padding: 0;
+}
+
+.post-list li {
+    padding: 12px 0;
+}
+
+.post-list h2 {
+    margin: 8px 0 0;
+    padding: 0;
+    border: 0;
+    font-size: 1rem;
+    font-weight: normal;
+}
+
+.post-list h2 a {
+    color: var(--heading-color);
+}
+
+.post-list h2 a:hover {
+    color: var(--link-color);
+}
+
+.post-badge {
+    margin-left: 8px;
+    padding: 1px 8px;
+    border: 1px solid var(--badge-border);
+    border-radius: 999px;
+    background: var(--badge-bg);
+    color: var(--link-color);
+    font-size: 0.8rem;
+}
+
+/* Article body — the HTML rendered from Markdown */
+.post-content h1 {
+    font-size: 2.2rem;
+}
+
+.post-content h2 {
+    margin-top: 2.5rem;
+}
+
+.post-content h3 {
+    margin-top: 1.75rem;
+}
+
+.post-content blockquote {
+    margin: 1.5rem 0;
+    padding: 0.25rem 1.25rem;
+    border-left: 3px solid var(--link-color);
+    color: var(--muted-color);
+}
+
+.post-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+.post-content hr {
+    border: 0;
+    border-top: 1px solid var(--border-color);
+    margin: 2rem 0;
+}
+
+.post-content table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.95rem;
+}
+
+.post-content th,
+.post-content td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.post-content th {
+    background: var(--subtle-bg);
+}
+
+/* Code: inline chips and highlighted blocks */
+.post-content pre {
+    overflow-x: auto;
+    padding: 1rem 1.35rem;
+    border: 1.5px solid var(--code-block-border);
+    border-radius: 0.3rem;
+    background: var(--code-block-bg);
+    color: var(--code-block-fg);
+    font-size: 0.875rem;
+    line-height: 1.65;
+}
+
+.post-content code {
+    font-family: var(--mono-font);
+    font-size: 0.9em;
+}
+
+.post-content :is(li, p) code {
+    padding: 0.2em 0.4em;
+    margin-inline: 0.1em;
+    border-radius: 2px;
+    background: var(--code-inline-bg);
+    font-size: 0.875rem;
+}
+
+/* Must follow the inline-chip rule: same specificity, later wins */
+.post-content pre code {
+    font-size: inherit;
+}
+
+.post-content pre ::selection {
+    background: #3392ff44;
+}
+
+/* Pygments token classes, colored with the GitHub Dark palette */
+.codehilite :is(.c, .c1, .cm, .ch, .cs, .cp, .cpf) { color: #6a737d; }
+.codehilite :is(.k, .kd, .kn, .kr, .kp, .kt, .o, .ow) { color: #f97583; }
+.codehilite :is(.kc, .nb, .bp, .m, .mf, .mh, .mi, .mo, .il, .no, .nv) { color: #79b8ff; }
+.codehilite :is(.nf, .fm, .nc, .na, .nd) { color: #b392f0; }
+.codehilite :is(.s, .s1, .s2, .sa, .sb, .sc, .sd, .se, .sh, .si, .sr, .ss, .sx, .dl) { color: #9ecbff; }
+.codehilite .nt { color: #85e89d; }
+.codehilite .err { color: #fdaeb7; }
+
+/* Related posts, under the article */
+.related-posts {
+    margin-top: 3rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.related-posts h2 {
+    font-size: 1.1rem;
 }
 
 /* =========================================
@@ -587,12 +661,38 @@ footer {
     margin-bottom: 20px;
 }
 
+/* Meta info line under a heading or the KPI grid */
+.dashboard-meta {
+    font-size: 13px;
+    color: var(--meta-color);
+    font-style: italic;
+    margin-top: 6px;
+    margin-bottom: 30px;
+}
+
+.data-updated {
+    margin-bottom: 0;
+}
+
+.dashboard-note {
+    margin: 8px 0 0;
+    color: var(--meta-color);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 /* KPI grid — three columns on desktop, two on mobile. */
 .kpi-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     margin-bottom: 14px;
+}
+
+@media (max-width: 720px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 .kpi-card {
@@ -624,26 +724,7 @@ footer {
     color: var(--meta-color);
 }
 
-/* Meta info line under the KPI grid */
-.dashboard-meta {
-    font-size: 13px;
-    color: var(--meta-color);
-    font-style: italic;
-    margin-top: 6px;
-    margin-bottom: 30px;
-}
-
-.data-updated {
-    margin-bottom: 0;
-}
-
-.dashboard-note {
-    margin: 8px 0 0;
-    color: var(--meta-color);
-    font-size: 12px;
-    line-height: 1.5;
-}
-
+/* Period Performance — heading with the period switcher beside it */
 .dashboard-heading-row {
     display: flex;
     align-items: end;
@@ -671,9 +752,7 @@ footer {
 }
 
 .period-tab {
-    display: inline-block;
-    text-decoration: none;
-    border: 1px solid var(--code-border);
+    border: 1px solid var(--border-strong);
     border-radius: 999px;
     background: var(--bg-color);
     color: var(--muted-color);
@@ -690,11 +769,18 @@ footer {
     background: var(--subtle-bg);
 }
 
-.period-tab:focus-visible {
-    outline: 2px solid var(--heading-color);
-    outline-offset: 2px;
+@media (max-width: 620px) {
+    .dashboard-heading-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .period-tabs {
+        padding-bottom: 14px;
+    }
 }
 
+/* Data Coverage */
 .coverage-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -704,7 +790,7 @@ footer {
 .coverage-grid p {
     margin: 0;
     padding: 14px;
-    border-left: 2px solid var(--code-border);
+    border-left: 2px solid var(--border-strong);
     font-size: 12px;
 }
 
@@ -723,27 +809,18 @@ footer {
     font-weight: 600;
 }
 
-.provider-details {
-    margin-top: 24px;
-    overflow-x: auto;
-}
-
 @media (max-width: 620px) {
-    .dashboard-heading-row {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .period-tabs {
-        padding-bottom: 14px;
-    }
-
     .coverage-grid {
         grid-template-columns: 1fr;
     }
 }
 
 /* Minimal table — only horizontal dividers, no full grid */
+.provider-details {
+    margin-top: 24px;
+    overflow-x: auto;
+}
+
 .dashboard-table {
     width: 100%;
     border-collapse: collapse;
@@ -759,7 +836,6 @@ footer {
     letter-spacing: 0.08em;
     padding: 14px 12px;
     border-bottom: 1px solid var(--border-color);
-    background: transparent;
 }
 
 .dashboard-table td {
@@ -786,30 +862,20 @@ footer {
     white-space: nowrap;
 }
 
-/* Responsive */
 @media (max-width: 720px) {
-    .kpi-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
     .dashboard-table {
         font-size: 0.85rem;
     }
+
     .dashboard-table th,
     .dashboard-table td {
         padding: 12px 8px;
     }
 }
 
-@media (max-width: 480px) {
-    .kpi-card-value {
-        font-size: 1.5rem;
-    }
-}
-
 /* =========================================
    9. Error Pages (404 / 500)
    ========================================= */
-
 .error-page {
     text-align: center;
     padding: 60px 20px;
