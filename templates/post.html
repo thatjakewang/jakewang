@@ -1,6 +1,5 @@
 {% extends "base.html" %}
-
-{% macro time_tag(day) %}<time datetime="{{ day.isoformat() }}">{{ day.isoformat() }}</time>{% endmacro %}
+{% from "macros.html" import time_tag %}
 
 {% block content %}
 <article class="post-page">

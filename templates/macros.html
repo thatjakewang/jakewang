@@ -1,0 +1,5 @@
+{# Macros shared by more than one template. Import with
+   {% from "macros.html" import ... %}. #}
+
+{# A date as a machine-readable <time> element. #}
+{% macro time_tag(day) %}<time datetime="{{ day.isoformat() }}">{{ day.isoformat() }}</time>{% endmacro %}

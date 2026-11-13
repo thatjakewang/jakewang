@@ -51,7 +51,7 @@ app/
   tesla.py         # the writes and their undo, and the queries behind the dashboard
   posts.py         # Markdown articles: parsing, validation, category routes
 posts/             # the articles, one folder per category (posts/kintone/*.md)
-templates/         # Jinja page shells (base, home, dashboard, article list + page, error)
+templates/         # Jinja page shells (base, home, dashboard, article list + page, error) and shared macros
 static/            # The JS/CSS the browser gets, plus favicons — no build step
 tests/             # pytest: period maths, write rules, article parsing
 schema.sql         # reference DDL for rebuilding the database
