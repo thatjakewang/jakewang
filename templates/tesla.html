@@ -23,6 +23,54 @@
 {# Row count under a table heading: "1 latest charge", "3 latest charges". #}
 {% macro latest_count(rows, noun) %}{{ rows | length }} latest {{ noun }}{{ "" if rows | length == 1 else "s" }}{% endmacro %}
 
+{# One view of the Monthly Cost chart: gridlines, a column per month, the hover
+   readout and the month labels. `stacked` draws charging and other costs on
+   top of each other; without it only charging is drawn, against its own axis.
+   Each bar's height is its share of the axis and its segments split that
+   height in proportion, so the chart needs no script to render. #}
+{% macro cost_plot(months, axis, stacked) %}
+<div class="cost-plot">
+    {% for tick in axis.ticks %}
+    <div class="cost-gridline" style="bottom: {{ (tick.value / axis.max * 100) | round(2) }}%"><span>{{ tick.label }}</span></div>
+    {% endfor %}
+    <div class="cost-columns">
+        {% for month in months %}
+        {% set value = month.total if stacked else month.charging_cost %}
+        <button type="button" class="cost-column"
+                {% if stacked %}
+                aria-label="{{ month.name }}: charging {{ month.charging_cost | money }}, other costs {{ month.non_charging_cost | money }}, total {{ month.total | money }}"
+                data-other="{{ month.non_charging_cost | money }}" data-total="{{ month.total | money }}"
+                {% else %}
+                aria-label="{{ month.name }}: charging {{ month.charging_cost | money }}"
+                {% endif %}
+                data-month="{{ month.name }}" data-charging="{{ month.charging_cost | money }}">
+            {% if value %}
+            <span class="cost-bar" style="height: {{ (value / axis.max * 100) | round(2) }}%">
+                {% if month.charging_cost %}<span class="cost-segment cost-charging" style="flex-grow: {{ month.charging_cost }}"></span>{% endif %}
+                {% if stacked and month.non_charging_cost %}<span class="cost-segment cost-other" style="flex-grow: {{ month.non_charging_cost }}"></span>{% endif %}
+            </span>
+            {% endif %}
+        </button>
+        {% endfor %}
+    </div>
+    <div class="cost-tooltip" aria-hidden="true" hidden>
+        <div class="cost-tooltip-month" data-readout="month"></div>
+        <div><span class="cost-key cost-charging"></span><strong data-readout="charging"></strong> Charging</div>
+        {% if stacked %}
+        <div><span class="cost-key cost-other"></span><strong data-readout="other"></strong> Other costs</div>
+        <div class="cost-tooltip-total"><strong data-readout="total"></strong> Total</div>
+        {% endif %}
+    </div>
+</div>
+<div class="cost-months" aria-hidden="true">
+    {% for month in months %}
+    {# The .cost-wide parts drop out on narrow screens: "Dec 2025" becomes "D 25". #}
+    <span>{{ month.label[0] }}<span class="cost-wide">{{ month.label[1:] }}</span>
+        {%- if loop.first or month.label == "Jan" %}<small><span class="cost-wide">{{ (month.year | string)[:2] }}</span>{{ (month.year | string)[2:] }}</small>{% endif %}</span>
+    {% endfor %}
+</div>
+{% endmacro %}
+
 {% block content %}
 <section class="intro">
     <h1>Tesla Cost Tracker</h1>
@@ -87,52 +135,33 @@
     <p class="dashboard-note">Total cost covers the calendar period; distance and the per-km figures cover the span between the odometer readings shown above. Charged energy may not be consumed in the same period; longer views reduce timing noise, and only the 12-month view is sure to include each annual charge once.</p>
 </section>
 
-{# Stacked columns, one per month. Drawn with plain elements: each bar's
-   height is its share of the axis and its two segments split that height in
-   proportion, so it needs no script to render; static/js/tesla.js only adds the
-   hover readout. The table below it carries the same numbers. #}
+{# Both views are rendered; static/js/tesla.js only switches which one is
+   shown and adds the hover readout. The table carries the same numbers. #}
 <section class="dashboard-section">
-    <h2 class="dashboard-section-title">Monthly Cost</h2>
+    <div class="dashboard-heading-row">
+        <h2 class="dashboard-section-title">Monthly Cost</h2>
+        {% if monthly_costs.axis.max %}
+        <div class="period-tabs" role="group" aria-label="Chart view">
+            <button type="button" class="period-tab is-active" aria-controls="cost-view-all" aria-pressed="true">All costs</button>
+            <button type="button" class="period-tab" aria-controls="cost-view-charging" aria-pressed="false">Charging only</button>
+        </div>
+        {% endif %}
+    </div>
     <p class="dashboard-meta">Last 12 months · NT$ per calendar month</p>
-    {% if monthly_costs.axis_max %}
-    <div class="cost-chart">
+    {% if monthly_costs.axis.max %}
+    <div class="cost-chart" id="cost-view-all">
         <ul class="cost-legend">
             <li><span class="cost-swatch cost-charging"></span>Charging</li>
             <li><span class="cost-swatch cost-other"></span>Other costs</li>
         </ul>
-        <div class="cost-plot">
-            {% for tick in monthly_costs.ticks %}
-            <div class="cost-gridline" style="bottom: {{ (tick.value / monthly_costs.axis_max * 100) | round(2) }}%"><span>{{ tick.label }}</span></div>
-            {% endfor %}
-            <div class="cost-columns">
-                {% for month in monthly_costs.months %}
-                <button type="button" class="cost-column"
-                        aria-label="{{ month.name }}: charging {{ month.charging_cost | money }}, other costs {{ month.non_charging_cost | money }}, total {{ month.total | money }}"
-                        data-month="{{ month.name }}" data-charging="{{ month.charging_cost | money }}"
-                        data-other="{{ month.non_charging_cost | money }}" data-total="{{ month.total | money }}">
-                    {% if month.total %}
-                    <span class="cost-bar" style="height: {{ (month.total / monthly_costs.axis_max * 100) | round(2) }}%">
-                        {% if month.charging_cost %}<span class="cost-segment cost-charging" style="flex-grow: {{ month.charging_cost }}"></span>{% endif %}
-                        {% if month.non_charging_cost %}<span class="cost-segment cost-other" style="flex-grow: {{ month.non_charging_cost }}"></span>{% endif %}
-                    </span>
-                    {% endif %}
-                </button>
-                {% endfor %}
-            </div>
-            <div class="cost-tooltip" aria-hidden="true" hidden>
-                <div class="cost-tooltip-month" data-readout="month"></div>
-                <div><span class="cost-key cost-charging"></span><strong data-readout="charging"></strong> Charging</div>
-                <div><span class="cost-key cost-other"></span><strong data-readout="other"></strong> Other costs</div>
-                <div class="cost-tooltip-total"><strong data-readout="total"></strong> Total</div>
-            </div>
-        </div>
-        <div class="cost-months" aria-hidden="true">
-            {% for month in monthly_costs.months %}
-            {# The .cost-wide parts drop out on narrow screens: "Dec 2025" becomes "D 25". #}
-            <span>{{ month.label[0] }}<span class="cost-wide">{{ month.label[1:] }}</span>
-                {%- if loop.first or month.label == "Jan" %}<small><span class="cost-wide">{{ (month.year | string)[:2] }}</span>{{ (month.year | string)[2:] }}</small>{% endif %}</span>
-            {% endfor %}
-        </div>
+        {{ cost_plot(monthly_costs.months, monthly_costs.axis, true) }}
+    </div>
+    <div class="cost-chart" id="cost-view-charging" hidden>
+        {% if monthly_costs.charging_axis.max %}
+        {{ cost_plot(monthly_costs.months, monthly_costs.charging_axis, false) }}
+        {% else %}
+        <p>No charging recorded in the last 12 months.</p>
+        {% endif %}
     </div>
     <details class="cost-table">
         <summary>Show as a table</summary>

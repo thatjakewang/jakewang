@@ -283,10 +283,13 @@ def compact_number(value: int) -> str:
 def get_monthly_costs(db: Session):
     """Charging and other costs for each of the last twelve calendar months.
 
-    Feeds the stacked column chart on the dashboard. A month with no records
-    is still returned, as zeros, so the chart keeps one column per month.
-    `ticks` are the y-axis ticks and `axis_max` the top one; it is 0 when the
-    whole window is empty, which the template takes as "nothing to draw".
+    Feeds the column chart on the dashboard. A month with no records is still
+    returned, as zeros, so the chart keeps one column per month.
+
+    The chart has two views with a y-axis each: `axis` fits the monthly
+    totals, `charging_axis` only the charging costs, so that one large expense
+    doesn't flatten every other month. An axis's `max` is its top tick; it is
+    0 when there is nothing to plot, which the template takes as "don't draw".
     """
     months = month_starts(get_today())
     rows = db.execute(text("""
@@ -322,11 +325,18 @@ def get_monthly_costs(db: Session):
             **cost,
             "total": cost["charging_cost"] + cost["non_charging_cost"],
         })
-    ticks = axis_ticks(max(month["total"] for month in result))
+
+    def axis(key: str) -> dict:
+        ticks = axis_ticks(max(month[key] for month in result))
+        return {
+            "ticks": [{"value": tick, "label": compact_number(tick)} for tick in ticks],
+            "max": ticks[-1],
+        }
+
     return {
         "months": result,
-        "ticks": [{"value": tick, "label": compact_number(tick)} for tick in ticks],
-        "axis_max": ticks[-1],
+        "axis": axis("total"),
+        "charging_axis": axis("charging_cost"),
     }
 
 

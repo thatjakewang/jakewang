@@ -61,7 +61,7 @@ The dashboard is rendered server-side: `/mytesla/` calls `get_dashboard()`,
 which resolves twelve queries in one session, and Jinja prints the numbers
 straight into the HTML. The page
 ships one small script of its own, `static/js/tesla.js` for the period
-switch and the chart's hover readout; the only other script on the site is `static/js/nav.js` for the
+switch, the chart's view switch and its hover readout; the only other script on the site is `static/js/nav.js` for the
 mobile menu. Nothing needs a redeploy when new
 records land, and nothing needs a second round trip either. It is KPI figures,
 tables and one chart.
@@ -75,7 +75,10 @@ The Monthly Cost chart shows charging and other costs for the last twelve
 calendar months as stacked columns. It is plain HTML and CSS — the template
 sets each bar's height as a percentage — so it renders without JavaScript and
 needs no chart library, which the Content-Security-Policy would not load from
-another host anyway. The same numbers are in a table under the chart.
+another host anyway. An `All costs` / `Charging only` switch changes the view: the second
+draws charging against its own axis, so one large expense such as insurance
+doesn't flatten every other month. Both views are rendered up front, like the
+periods. The same numbers are in a table under the chart.
 
 A period's total cost covers its calendar window. Its distance and per-km
 figures cover the span between two odometer readings — the last one before the

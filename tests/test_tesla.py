@@ -162,14 +162,18 @@ def test_monthly_costs_fill_empty_months_and_skip_future_ones(monkeypatch):
     assert (months[-1]["charging_cost"], months[-1]["non_charging_cost"], months[-1]["total"]) == (760, 300, 1060)
     assert months[3]["total"] == 28500
     assert months[1]["total"] == 0
-    assert chart["axis_max"] == 30000
-    assert [tick["label"] for tick in chart["ticks"]] == ["0", "10K", "20K", "30K"]
+    assert chart["axis"]["max"] == 30000
+    assert [tick["label"] for tick in chart["axis"]["ticks"]] == ["0", "10K", "20K", "30K"]
+    # The charging view is scaled to charging alone, not to the big expense.
+    assert chart["charging_axis"]["max"] == 800
+    assert [tick["label"] for tick in chart["charging_axis"]["ticks"]] == ["0", "200", "400", "600", "800"]
 
 
 def test_monthly_costs_without_records_have_no_axis(monkeypatch):
     monkeypatch.setattr(tesla, "get_today", lambda: date(2026, 11, 10))
     chart = tesla.get_monthly_costs(FakeSession([]))
-    assert chart["axis_max"] == 0
+    assert chart["axis"]["max"] == 0
+    assert chart["charging_axis"]["max"] == 0
     assert len(chart["months"]) == 12
 
 
