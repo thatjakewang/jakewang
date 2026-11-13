@@ -1,5 +1,23 @@
-{# Home (main.home): intro bio, project cards, skills #}
+{# Home (main.home): intro bio, project list, skills #}
 {% extends 'base.html' %}
+
+{# (url, title, description) #}
+{% set projects = [
+    ("/mytesla/", "🚗 MyTesla",
+     "Live Tesla Model 3 Highland cost tracker — total ownership cost, cost per km, charging by provider, and period comparisons."),
+    ("/kintone/", "🧩 Kintone Notes",
+     "Short how-to posts on customizing Kintone apps with JavaScript and CSS."),
+] %}
+
+{# (group, skills) #}
+{% set skills = [
+    ("Languages", "Python · SQL · JavaScript · HTML / CSS"),
+    ("Data", "Pandas · NumPy · Excel · PowerBI"),
+    ("ML & Stats", "scikit-learn · SciPy · Hypothesis testing · A/B testing"),
+    ("Visualization", "Matplotlib · Seaborn"),
+    ("Tools", "Git · Flask · Jinja"),
+] %}
+
 {% block content %}
 <section class="intro">
     <h1>Data Projects</h1>
@@ -9,39 +27,23 @@
 
 <section class="content-block" aria-label="Projects">
     <h2>Projects</h2>
+    {% for url, title, description in projects %}
     <div class="project-preview">
-        <h3><a href="/mytesla/">🚗 MyTesla</a></h3>
-        <p class="project-desc">Live Tesla Model 3 Highland cost tracker — total ownership cost, cost per km, charging by provider, and period comparisons.</p>
+        <h3><a href="{{ url }}">{{ title }}</a></h3>
+        <p class="project-desc">{{ description }}</p>
     </div>
-    <div class="project-preview">
-        <h3><a href="/kintone/">🧩 Kintone Notes</a></h3>
-        <p class="project-desc">Short how-to posts on customizing Kintone apps with JavaScript and CSS.</p>
-    </div>
+    {% endfor %}
 </section>
 
 <section class="content-block" aria-label="Skills">
     <h2>Skills</h2>
     <dl class="skill-list">
+        {% for group, items in skills %}
         <div class="skill-group">
-            <dt>Languages</dt>
-            <dd>Python · SQL · JavaScript · HTML / CSS</dd>
+            <dt>{{ group }}</dt>
+            <dd>{{ items }}</dd>
         </div>
-        <div class="skill-group">
-            <dt>Data</dt>
-            <dd>Pandas · NumPy · Excel · PowerBI</dd>
-        </div>
-        <div class="skill-group">
-            <dt>ML &amp; Stats</dt>
-            <dd>scikit-learn · SciPy · Hypothesis testing · A/B testing</dd>
-        </div>
-        <div class="skill-group">
-            <dt>Visualization</dt>
-            <dd>Matplotlib · Seaborn</dd>
-        </div>
-        <div class="skill-group">
-            <dt>Tools</dt>
-            <dd>Git · Flask · Jinja</dd>
-        </div>
+        {% endfor %}
     </dl>
 </section>
 {% endblock %}
