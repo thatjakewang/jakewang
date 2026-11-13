@@ -53,7 +53,7 @@ app/
 posts/             # the articles, one folder per category (posts/kintone/*.md)
 templates/         # Jinja page shells (base, home, dashboard, article list + page, error) and shared macros
 static/            # The JS/CSS the browser gets, plus favicons — no build step
-tests/             # pytest: period maths, write rules, article parsing
+tests/             # pytest: period maths, write rules, article parsing, response headers and error pages
 schema.sql         # reference DDL for rebuilding the database
 ```
 
