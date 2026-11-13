@@ -3,14 +3,16 @@
 (function () {
     var tabs = document.querySelectorAll(".period-tab[data-period]");
 
-    tabs.forEach(function (tab) {
-        tab.addEventListener("click", function () {
-            tabs.forEach(function (other) {
-                var active = other === tab;
-                other.classList.toggle("is-active", active);
-                other.setAttribute("aria-pressed", active ? "true" : "false");
-                document.getElementById(other.getAttribute("aria-controls")).hidden = !active;
-            });
+    function showPeriod(selected) {
+        tabs.forEach(function (tab) {
+            var active = tab === selected;
+            tab.classList.toggle("is-active", active);
+            tab.setAttribute("aria-pressed", active ? "true" : "false");
+            document.getElementById(tab.getAttribute("aria-controls")).hidden = !active;
         });
+    }
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener("click", function () { showPeriod(tab); });
     });
 })();
