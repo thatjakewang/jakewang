@@ -17,38 +17,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff">
+    <title>{% block title %}{{ meta_title | default('Jake Wang') }}{% endblock %}</title>
+    {% if meta_description %}<meta name="description" content="{{ meta_description }}">{% endif %}
+
     {# Also sent as an X-Robots-Tag header (app/main.py); the tag is here too
        because it is what most crawlers and audit tools look at first.
        Everything is noindex unless the view passes indexable (app/posts.py).
        Indexable pages name their canonical URL instead, so a copy reached
        through another hostname or with a query string isn't indexed twice. #}
-    {% if indexable %}<link rel="canonical" href="{{ absolute_url(request.url.path) }}">
-    {% else %}<meta name="robots" content="{{ robots | default('noindex, nofollow') }}">{% endif %}
-    {% if meta_description %}<meta name="description" content="{{ meta_description }}">{% endif %}
-    {# Link previews in chat and social apps. One image serves every page. #}
     {% if indexable %}
+    {% set canonical_url = absolute_url(request.url.path) %}
+    <link rel="canonical" href="{{ canonical_url }}">
+    {# Link previews in chat and social apps. One image serves every page. #}
     <meta property="og:type" content="{{ og_type | default('website') }}">
     <meta property="og:site_name" content="Jake Wang">
     <meta property="og:title" content="{{ meta_title }}">
     {% if meta_description %}<meta property="og:description" content="{{ meta_description }}">{% endif %}
-    <meta property="og:url" content="{{ absolute_url(request.url.path) }}">
+    <meta property="og:url" content="{{ canonical_url }}">
     <meta property="og:image" content="{{ share_image_url() }}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Kintone JavaScript Customization Guides by Jake Wang">
     <meta name="twitter:card" content="summary_large_image">
+    {% else %}
+    <meta name="robots" content="{{ robots | default('noindex, nofollow') }}">
     {% endif %}
     {# Proves ownership of the site to Google Search Console. #}
     <meta name="google-site-verification" content="ZmmGyeuVcxCpLY3WBPK2xVCd9DJRXxK5RhrjvsUG_80">
     {# JSON-LD is data, not script, so the CSP's ban on inline scripts doesn't
        apply. tojson escapes <, > and & so a title can't close the tag. #}
     {% if structured_data %}<script type="application/ld+json">{{ structured_data | tojson }}</script>{% endif %}
-    <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
-    <title>{% block title %}{{ meta_title | default('Jake Wang') }}{% endblock %}</title>
-    <script src="{{ static_url('js/nav.js') }}" defer></script>
-    {% block extra_head %}{% endblock %}
+
     <link rel="icon" type="image/svg+xml" href="{{ static_url('images/favicon/favicon.svg') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ static_url('images/favicon/apple-touch-icon.png') }}">
+    <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
+    <script src="{{ static_url('js/nav.js') }}" defer></script>
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     {# Full-bleed sticky shell; reading content stays in .container below.
@@ -68,10 +72,10 @@
 
             <div class="site-header-panel" id="site-nav-panel">
                 <nav class="site-nav" aria-label="Main">
-                    <a href="/kintone/"
-                       class="nav-link{% if request.url.path.startswith('/kintone/') %} is-active{% endif %}">Kintone</a>
-                    <a href="/mytesla/"
-                       class="nav-link{% if request.url.path == '/mytesla/' %} is-active{% endif %}">MyTesla</a>
+                    {% for href, label in [("/kintone/", "Kintone"), ("/mytesla/", "MyTesla")] %}
+                    <a href="{{ href }}"
+                       class="nav-link{% if request.url.path.startswith(href) %} is-active{% endif %}">{{ label }}</a>
+                    {% endfor %}
                 </nav>
                 <a class="header-cta" href="https://github.com/thatjakewang" target="_blank" rel="noopener noreferrer">GitHub</a>
             </div>
