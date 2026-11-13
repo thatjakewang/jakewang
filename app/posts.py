@@ -8,13 +8,13 @@ last revision. File changes invalidate the bounded parsing
 cache; adding or deleting a file needs no process restart.
 """
 
+import html as html_lib
+import logging
+import re
 from dataclasses import dataclass
 from datetime import date
 from functools import lru_cache
-import html as html_lib
-import logging
 from pathlib import Path
-import re
 
 import frontmatter
 import markdown
@@ -27,12 +27,24 @@ from app.templating import BASE_DIR, absolute_url, share_image_url, templates
 
 logger = logging.getLogger(__name__)
 POSTS_DIR = BASE_DIR / "posts"
-CATEGORIES = {"kintone": "Kintone"}
-# Heading (<h1> and <title>) and meta description for each category's list
-# page. The short label above stays the name used in navigation and badges.
-CATEGORY_HEADINGS = {"kintone": "Kintone JavaScript Customization Guides"}
-CATEGORY_DESCRIPTIONS = {
-    "kintone": "Short how-to posts on customizing Kintone apps with JavaScript and CSS.",
+
+
+@dataclass(frozen=True)
+class Category:
+    # The short name used in navigation and badges.
+    label: str
+    # Heading (<h1> and <title>) of the category's list page; the label when empty.
+    heading: str = ""
+    # Meta description of the list page.
+    description: str = ""
+
+
+CATEGORIES = {
+    "kintone": Category(
+        label="Kintone",
+        heading="Kintone JavaScript Customization Guides",
+        description="Short how-to posts on customizing Kintone apps with JavaScript and CSS.",
+    ),
 }
 # Search results show roughly this many characters of a meta description.
 DESCRIPTION_LIMIT = 160
@@ -86,57 +98,73 @@ def _first_paragraph(html: str) -> str:
     return text[:DESCRIPTION_LIMIT].rsplit(" ", 1)[0] + "…"
 
 
+def _front_matter_date(value, key: str) -> date:
+    """A front-matter date. YAML parses a bare YYYY-MM-DD itself; a quoted one
+    arrives as a string."""
+    if isinstance(value, str):
+        value = date.fromisoformat(value)
+    if type(value) is not date:
+        raise ValueError(f"{key} must be YYYY-MM-DD")
+    return value
+
+
+def _parse_post(path: Path) -> Post:
+    """Read and validate one article. Raises for anything _read_post skips."""
+    source = frontmatter.loads(path.read_text(encoding="utf-8-sig"))
+    title = source.get("title")
+    category = source.get("category")
+    if not isinstance(title, str) or not title.strip():
+        raise ValueError("title must be a nonempty string")
+    if not isinstance(category, str) or category not in CATEGORIES:
+        raise ValueError("category must name a configured category")
+    published = _front_matter_date(source.get("date"), "date")
+    updated = _front_matter_date(source.get("updated", published), "updated")
+    if updated < published:
+        raise ValueError("updated must be on or after date")
+    slug = source.get("slug", re.sub(r"[^\w]+", "-", path.stem.lower()).strip("-"))
+    if not isinstance(slug, str) or not SEGMENT.fullmatch(slug):
+        raise ValueError("slug must contain words separated by hyphens")
+    authors = source.get("authors", [])
+    if not isinstance(authors, list) or not all(isinstance(a, str) for a in authors):
+        raise ValueError("authors must be a list of strings")
+    tags = source.get("tags", [])
+    if not isinstance(tags, list) or not all(isinstance(t, str) and t.strip() for t in tags):
+        raise ValueError("tags must be a list of nonempty strings")
+    for key in ("venue", "doi", "description"):
+        if not isinstance(source.get(key, ""), str):
+            raise ValueError(f"{key} must be a string")
+    html = markdown.markdown(
+        source.content, extensions=["tables", "fenced_code", "codehilite"],
+        extension_configs={"codehilite": {"guess_lang": False}}, output_format="html",
+    )
+
+    # Existing articles may already include their title and bibliographic
+    # details. Keep their body intact and only supply missing header fields.
+    def included(label: str) -> bool:
+        return bool(re.search(rf"<strong>{label}:?</strong>", html, re.IGNORECASE))
+
+    return Post(
+        title=title.strip(),
+        date=published,
+        category=category,
+        slug=slug,
+        html=Markup(html),
+        has_title=bool(re.search(r"<h1(?:\s|>)", html)),
+        authors=() if included("Authors") else tuple(authors),
+        venue="" if included("Venue") else source.get("venue", ""),
+        doi="" if included("DOI") else source.get("doi", ""),
+        tags=tuple(dict.fromkeys(t.strip() for t in tags)),
+        description=source.get("description", "").strip() or _first_paragraph(html),
+        updated=updated,
+    )
+
+
 @lru_cache(maxsize=256)
 def _read_post(path: Path, mtime_ns: int, size: int) -> Post | None:
+    """_parse_post, cached until the file's mtime or size changes. An article
+    that can't be read or fails validation is logged and skipped."""
     try:
-        source = frontmatter.loads(path.read_text(encoding="utf-8-sig"))
-        title = source.get("title")
-        category = source.get("category")
-        if not isinstance(title, str) or not title.strip():
-            raise ValueError("title must be a nonempty string")
-        if not isinstance(category, str) or category not in CATEGORIES:
-            raise ValueError("category must name a configured category")
-        published = source.get("date")
-        if isinstance(published, str):
-            published = date.fromisoformat(published)
-        if type(published) is not date:
-            raise ValueError("date must be YYYY-MM-DD")
-        updated = source.get("updated", published)
-        if isinstance(updated, str):
-            updated = date.fromisoformat(updated)
-        if type(updated) is not date or updated < published:
-            raise ValueError("updated must be YYYY-MM-DD, on or after date")
-        slug = source.get("slug", re.sub(r"[^\w]+", "-", path.stem.lower()).strip("-"))
-        if not isinstance(slug, str) or not SEGMENT.fullmatch(slug):
-            raise ValueError("slug must contain words separated by hyphens")
-        authors = source.get("authors", [])
-        if not isinstance(authors, list) or not all(isinstance(a, str) for a in authors):
-            raise ValueError("authors must be a list of strings")
-        tags = source.get("tags", [])
-        if not isinstance(tags, list) or not all(isinstance(t, str) and t.strip() for t in tags):
-            raise ValueError("tags must be a list of nonempty strings")
-        for key in ("venue", "doi", "description"):
-            if not isinstance(source.get(key, ""), str):
-                raise ValueError(f"{key} must be a string")
-        html = markdown.markdown(
-            source.content, extensions=["tables", "fenced_code", "codehilite"],
-            extension_configs={"codehilite": {"guess_lang": False}}, output_format="html",
-        )
-        # Existing articles may already include their title and bibliographic
-        # details. Keep their body intact and only supply missing header fields.
-        def included(label: str) -> bool:
-            return bool(re.search(rf"<strong>{label}:?</strong>", html, re.IGNORECASE))
-
-        return Post(
-            title.strip(), published, category, slug, Markup(html),
-            bool(re.search(r"<h1(?:\s|>)", html)),
-            () if included("Authors") else tuple(authors),
-            "" if included("Venue") else source.get("venue", ""),
-            "" if included("DOI") else source.get("doi", ""),
-            tuple(dict.fromkeys(t.strip() for t in tags)),
-            source.get("description", "").strip() or _first_paragraph(html),
-            updated,
-        )
+        return _parse_post(path)
     except (OSError, ValueError, TypeError, YAMLError) as exc:
         logger.warning("Skipping article %s: %s", path, exc)
         return None
@@ -145,8 +173,9 @@ def _read_post(path: Path, mtime_ns: int, size: int) -> Post | None:
 def get_posts() -> list[Post]:
     indexed: dict[str, Post] = {}
     duplicates: set[str] = set()
+    posts_root = POSTS_DIR.resolve()
     for path in sorted(POSTS_DIR.rglob("*.md")):
-        if not path.resolve().is_relative_to(POSTS_DIR.resolve()):
+        if not path.resolve().is_relative_to(posts_root):
             continue
         try:
             stat = path.stat()
@@ -217,38 +246,45 @@ def _structured_data(post: Post, label: str) -> dict:
     }
 
 
-def _category_router(category: str, label: str) -> APIRouter:
-    router = APIRouter(prefix=f"/{category}")
+def _category_router(slug: str, category: Category) -> APIRouter:
+    router = APIRouter(prefix=f"/{slug}")
 
-    @router.get("/", response_class=HTMLResponse, name=f"{category}_list")
+    @router.get("/", response_class=HTMLResponse, name=f"{slug}_list")
     def post_list(request: Request):
-        heading = CATEGORY_HEADINGS.get(category, label)
+        heading = category.heading or category.label
         return templates.TemplateResponse(
             request=request, name="posts.html", headers=INDEXABLE_HEADERS,
-            context={"meta_title": f"{heading} – Jake Wang", "category_label": label,
-                     "heading": heading,
-                     "meta_description": CATEGORY_DESCRIPTIONS.get(category, ""),
-                     "indexable": True,
-                     "posts": [p for p in get_posts() if p.category == category]},
+            context={
+                "meta_title": f"{heading} – Jake Wang",
+                "meta_description": category.description,
+                "indexable": True,
+                "heading": heading,
+                "category_label": category.label,
+                "posts": [p for p in get_posts() if p.category == slug],
+            },
         )
 
-    @router.get("/{slug}/", response_class=HTMLResponse, name=f"{category}_detail")
-    def post_detail(request: Request, slug: str):
+    @router.get("/{post_slug}/", response_class=HTMLResponse, name=f"{slug}_detail")
+    def post_detail(request: Request, post_slug: str):
         all_posts = get_posts()
-        post = next((p for p in all_posts if p.category == category and p.slug == slug), None)
+        post = next((p for p in all_posts if p.category == slug and p.slug == post_slug), None)
         if post is None:
             raise HTTPException(status_code=404)
         return templates.TemplateResponse(
             request=request, name="post.html", headers=INDEXABLE_HEADERS,
-            # No site-name suffix: the title alone already fills what a
-            # search result shows.
-            context={"meta_title": post.title, "post": post,
-                     "og_type": "article",
-                     "meta_description": post.description,
-                     "structured_data": _structured_data(post, label),
-                     "related": related_posts(post, all_posts),
-                     "indexable": True,
-                     "category_label": label, "category_url": f"/{category}/"},
+            context={
+                # No site-name suffix: the title alone already fills what a
+                # search result shows.
+                "meta_title": post.title,
+                "meta_description": post.description,
+                "og_type": "article",
+                "structured_data": _structured_data(post, category.label),
+                "indexable": True,
+                "post": post,
+                "related": related_posts(post, all_posts),
+                "category_label": category.label,
+                "category_url": f"/{slug}/",
+            },
         )
 
     return router
@@ -270,7 +306,7 @@ def sitemap_entries() -> list[tuple[str, date]]:
 def register_routes(app: FastAPI) -> None:
     """Call after existing routes so reserved URL prefixes can be checked."""
     reserved = {getattr(route, "path", "").strip("/").split("/")[0] for route in app.routes}
-    for category, label in CATEGORIES.items():
-        if not SEGMENT.fullmatch(category) or category in reserved:
-            raise ValueError(f"Invalid or conflicting article category: {category}")
-        app.include_router(_category_router(category, label))
+    for slug, category in CATEGORIES.items():
+        if not SEGMENT.fullmatch(slug) or slug in reserved:
+            raise ValueError(f"Invalid or conflicting article category: {slug}")
+        app.include_router(_category_router(slug, category))
