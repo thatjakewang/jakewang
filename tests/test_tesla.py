@@ -8,8 +8,13 @@ from pydantic import ValidationError
 from app import tesla, utils
 from app.dependencies import verify_shortcut_api_key
 from app.tesla import (
-    CarExpenseCreate, ChargingRecordCreate, OdometerReadingCreate, axis_ticks,
-    month_starts, odometer_span, period_windows,
+    CarExpenseCreate,
+    ChargingRecordCreate,
+    OdometerReadingCreate,
+    axis_ticks,
+    month_starts,
+    odometer_span,
+    period_windows,
 )
 from app.utils import create_record, delete_latest_record
 
@@ -164,15 +169,20 @@ def test_monthly_costs_fill_empty_months_and_skip_future_ones(monkeypatch):
         "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05",
         "2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11",
     ]
-    assert (months[-1]["label"], months[-1]["name"]) == ("Nov", "November 2026")
-    assert (months[-1]["charging_cost"], months[-1]["non_charging_cost"], months[-1]["total"]) == (760, 300, 1060)
+    latest = months[-1]
+    assert (latest["label"], latest["name"]) == ("Nov", "November 2026")
+    assert (latest["charging_cost"], latest["non_charging_cost"], latest["total"]) == (
+        760, 300, 1060,
+    )
     assert months[3]["total"] == 28500
     assert months[1]["total"] == 0
     assert chart["axis"]["max"] == 30000
     assert [tick["label"] for tick in chart["axis"]["ticks"]] == ["0", "10K", "20K", "30K"]
     # The charging view is scaled to charging alone, not to the big expense.
     assert chart["charging_axis"]["max"] == 800
-    assert [tick["label"] for tick in chart["charging_axis"]["ticks"]] == ["0", "200", "400", "600", "800"]
+    assert [tick["label"] for tick in chart["charging_axis"]["ticks"]] == [
+        "0", "200", "400", "600", "800",
+    ]
 
 
 def test_monthly_costs_without_records_have_no_axis(monkeypatch):

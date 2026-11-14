@@ -149,12 +149,13 @@ they pull in — and is what gets installed. Regenerate it after changing a pin:
 uv pip compile requirements.txt -o requirements.lock
 ```
 
-There is a small test suite and no CI: `git push` runs nothing. Run the tests
-and the app locally before deploying:
+There is a small test suite and no CI: `git push` runs nothing. Run the tests,
+the linter and the app locally before deploying:
 
 ```bash
-pip install -r requirements-dev.txt   # pytest; local only, never on the server
+pip install -r requirements-dev.txt   # pytest and ruff; local only, never on the server
 pytest tests
+ruff check .                          # rules are in ruff.toml
 ```
 
 The tests need no database — they cover the period date windows, the odometer

@@ -187,7 +187,9 @@ def get_posts() -> list[Post]:
         if post is None:
             continue
         if post.url in indexed:
-            logger.error("Duplicate article URL %s in %s; hiding conflicting articles", post.url, path)
+            logger.error(
+                "Duplicate article URL %s in %s; hiding conflicting articles", post.url, path
+            )
             duplicates.add(post.url)
         indexed[post.url] = post
     return sorted(

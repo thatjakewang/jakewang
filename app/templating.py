@@ -6,7 +6,7 @@ application. It once had to live here to avoid a circular import with the page
 routers; that constraint is gone, and this is now a choice.
 """
 
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
@@ -22,7 +22,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 # stat() once per process; assets only change on redeploy, which restarts it.
-@lru_cache(maxsize=None)
+@cache
 def _static_version(filename: str) -> int:
     """File mtime, used as the ?v= cache-buster. 0 when the file is missing."""
     try:
