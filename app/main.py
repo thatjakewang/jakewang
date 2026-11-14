@@ -334,21 +334,25 @@ def health_check(db: Session = Depends(get_db)):
     return {"status": "ok", "database": "ok"}
 
 
-HOME_ROBOTS = "noindex, follow"
-
-
 @app.get("/")
 def home(request: Request):
     """Landing page: intro, projects, and skills.
 
-    Stays out of the index like the rest of the site, but lets crawlers follow
-    its links, since it is the way in to the articles.
+    Indexable like the articles, so a search for the name finds the site, and
+    crawlers follow its links on to the articles.
     """
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        headers={"X-Robots-Tag": HOME_ROBOTS},
-        context={"meta_title": "Jake Wang – Data Projects", "robots": HOME_ROBOTS},
+        headers=posts.INDEXABLE_HEADERS,
+        context={
+            "meta_title": "Jake Wang – Data Projects",
+            "meta_description": (
+                "Jake Wang's data projects: a live Tesla Model 3 cost tracker "
+                "and how-to posts on customizing Kintone apps with JavaScript and CSS."
+            ),
+            "indexable": True,
+        },
     )
 
 

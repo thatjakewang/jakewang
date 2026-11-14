@@ -81,10 +81,13 @@ def test_pages_carry_the_security_headers():
     assert "camera=()" in headers["permissions-policy"]
 
 
-def test_only_the_articles_are_indexable():
+def test_only_the_home_page_and_articles_are_indexable():
     assert request("GET", "/nope").headers["x-robots-tag"] == "noindex, nofollow"
     assert request("GET", "/static/css/style.css").headers["x-robots-tag"] == "noindex, nofollow"
-    assert request("GET", "/").headers["x-robots-tag"] == "noindex, follow"
+    home = request("GET", "/")
+    assert home.headers["x-robots-tag"] == "all"
+    assert b'<meta name="robots"' not in home.body
+    assert f'<link rel="canonical" href="{absolute_url("/")}">'.encode() in home.body
     assert request("GET", "/kintone/").headers["x-robots-tag"] == "all"
     assert request("GET", "/kintone/nope/").headers["x-robots-tag"] == "noindex, nofollow"
 

@@ -7,8 +7,8 @@ the database), and Markdown articles under `/kintone/`. The only API is
 an API key.
 
 Mostly not a traffic-facing site: there is no analytics. Every response is
-`noindex` except the articles under `/kintone/`, which search engines may
-index and which `/sitemap.xml` lists. `/robots.txt` turns the AI training crawlers away,
+`noindex` except the home page and the articles under `/kintone/`, which
+search engines may index; `/sitemap.xml` lists the articles. `/robots.txt` turns the AI training crawlers away,
 lets AI search (OAI-SearchBot, PerplexityBot) in, and points to the sitemap.
 
 ## Stack
@@ -101,7 +101,7 @@ already link to, those sharing the most tags first, then the newest. A file that
 logged and skipped rather than breaking the list. Files are re-read when they
 change, so publishing is `git pull` — no restart.
 
-The article list and article pages are the only indexable responses: their
+The home page, article list and article pages are the only indexable responses: their
 routes send `X-Robots-Tag: all` and pass `indexable` to the template, which
 drops the `noindex` meta tag and adds a canonical link and a meta description.
 Article pages also carry schema.org JSON-LD (`BlogPosting` and
@@ -109,8 +109,7 @@ Article pages also carry schema.org JSON-LD (`BlogPosting` and
 previews, all using one share image (`static/images/share.png`, drawn from
 `share.svg` beside it). Every page has the Google Search Console verification tag.
 Everything else, including a 404 under `/kintone/`, keeps the site-wide
-`noindex, nofollow`, except the home page, which is `noindex, follow` so
-crawlers can reach the articles through it. Canonical links and the sitemap
+`noindex, nofollow`. Canonical links and the sitemap
 are built from `SITE_URL`, never from the request's hostname.
 
 ## Environment Variables
