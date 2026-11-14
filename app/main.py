@@ -216,12 +216,17 @@ async def html_error_handler(request: Request, exc: StarletteHTTPException):
     """Friendly HTML error pages for page requests; JSON for the API.
 
     Without this, a mistyped URL would return FastAPI's bare JSON detail
-    instead of the site's 404 page.
+    instead of the site's 404 page. The exception's headers are passed on
+    either way: a 405 names the methods that are allowed in one.
     """
     if is_api_request(request) or exc.status_code not in ERROR_PAGES:
-        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=exc.headers,
+        )
 
-    return error_page(request, exc.status_code)
+    return error_page(request, exc.status_code, exc.headers)
 
 
 @app.exception_handler(Exception)

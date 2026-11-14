@@ -144,6 +144,7 @@ def test_status_codes_without_an_error_page_stay_json():
     response = request("POST", "/")
     assert response.status == 405
     assert json.loads(response.body) == {"detail": "Method Not Allowed"}
+    assert response.headers["allow"] == "GET"
 
 
 def test_unhandled_error_on_a_page_is_a_generic_html_500(use_db):

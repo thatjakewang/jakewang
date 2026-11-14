@@ -37,7 +37,13 @@ from app.utils import (
 # Every route here is a write, so the key check sits on the router: a new
 # endpoint is protected without having to remember to ask for it.
 router = APIRouter(dependencies=[Depends(verify_shortcut_api_key)])
-RecordLabel = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+# No NUL bytes: Postgres text can't hold one, so it would fail there as a 500.
+RecordLabel = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True, min_length=1, max_length=100, pattern=r"^[^\x00]*$",
+    ),
+]
 # The largest values the columns hold (bigint amounts, integer reading_km, see
 # schema.sql). Anything above is refused here as a 422, instead of failing in
 # Postgres as a 500.

@@ -5,7 +5,7 @@ import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from app import tesla
+from app import tesla, utils
 from app.dependencies import verify_shortcut_api_key
 from app.tesla import (
     CarExpenseCreate, ChargingRecordCreate, OdometerReadingCreate, axis_ticks,
@@ -219,6 +219,21 @@ def test_values_too_large_for_their_columns_are_refused():
             charge_date=date(2026, 11, 10), provider="Home", amount=2**63, kwh=10,
         )
     assert reading(2**31 - 1).reading_km == 2**31 - 1
+
+
+def test_labels_with_a_nul_byte_are_refused():
+    with pytest.raises(ValidationError):
+        CarExpenseCreate(date=date(2026, 11, 10), item="To\x00ll", amount=40)
+    expense = CarExpenseCreate(date=date(2026, 11, 10), item="  Toll\n(ETC) ", amount=40)
+    assert expense.item == "Toll\n(ETC)"
+
+
+@pytest.mark.parametrize("timezone", ["", "../etc", "Asia/Nowhere"])
+def test_today_falls_back_when_the_timezone_is_invalid(monkeypatch, timezone):
+    monkeypatch.setattr(
+        utils, "get_settings", lambda: SimpleNamespace(app_timezone=timezone),
+    )
+    assert isinstance(utils.get_today(), date)
 
 
 def test_create_record_returns_a_recent_identical_row_instead_of_inserting():

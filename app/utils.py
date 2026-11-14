@@ -137,7 +137,9 @@ def get_today() -> date:
     settings = get_settings()
     try:
         timezone = ZoneInfo(settings.app_timezone)
-    except ZoneInfoNotFoundError:
+    # An unknown zone is ZoneInfoNotFoundError; an empty or path-like value is
+    # a plain ValueError.
+    except (ZoneInfoNotFoundError, ValueError):
         timezone = ZoneInfo("Asia/Taipei")
 
     return datetime.now(timezone).date()
