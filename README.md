@@ -8,7 +8,7 @@ an API key.
 
 Mostly not a traffic-facing site: there is no analytics. Every response is
 `noindex` except the home page and the articles under `/kintone/`, which
-search engines may index; `/sitemap.xml` lists the articles. `/robots.txt` turns the AI training crawlers away,
+search engines may index; `/sitemap.xml` lists them. `/robots.txt` turns the AI training crawlers away,
 lets AI search (OAI-SearchBot, PerplexityBot) in, and points to the sitemap.
 
 ## Stack
@@ -278,7 +278,7 @@ functions in `app/tesla.py`, called by `get_dashboard()`.
 |--------|------|-------------|
 | GET | `/health` | Health check (pings the DB; 503 if unreachable) |
 | GET | `/robots.txt` | Allows search engines and AI search, blocks the AI training crawlers, names the sitemap |
-| GET | `/sitemap.xml` | The article lists and articles, on the canonical origin |
+| GET | `/sitemap.xml` | The home page, article lists and articles, on the canonical origin |
 
 > Note: all tables carry an `id` (SERIAL) column, which is what the writes return.
 

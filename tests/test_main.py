@@ -206,6 +206,7 @@ def test_sitemap_lists_the_indexable_pages_with_escaped_urls(monkeypatch):
     assert response.status == 200
     assert response.headers["content-type"] == "application/xml"
     xml = response.body.decode()
+    assert f"<url><loc>{absolute_url('/')}</loc></url>" in xml
     assert (f"<url><loc>{absolute_url('/kintone/')}</loc>"
             "<lastmod>2026-11-10</lastmod></url>") in xml
     assert "/kintone/a&amp;b/</loc><lastmod>2026-11-04</lastmod>" in xml

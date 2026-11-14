@@ -3,11 +3,13 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from app import tesla
 from app.dependencies import verify_shortcut_api_key
 from app.tesla import (
-    OdometerReadingCreate, axis_ticks, month_starts, odometer_span, period_windows,
+    CarExpenseCreate, ChargingRecordCreate, OdometerReadingCreate, axis_ticks,
+    month_starts, odometer_span, period_windows,
 )
 from app.utils import create_record, delete_latest_record
 
@@ -119,6 +121,10 @@ def test_period_summary_divides_span_costs_by_span_distance(monkeypatch):
     assert current["kwh_per_100km"] == 15.0
     # Prior month: 800 over the 600 km between 09-25 and 10-09 -> 1.33/km.
     assert current["cost_per_km_change_pct"] == 200.0
+    # Only the month is partial; the trailing windows are always full length.
+    assert current["is_partial"] is True
+    assert summary["trailing_90_days"]["is_partial"] is False
+    assert summary["trailing_365_days"]["is_partial"] is False
     # No reading before the 90-day window opens, so nothing to divide by.
     assert summary["trailing_365_days"]["km_driven"] is None
     assert summary["trailing_365_days"]["total_cost_per_km"] is None
@@ -201,6 +207,18 @@ def test_odometer_reading_in_range_is_inserted():
     response = tesla.create_odometer_reading(reading(23120), db=db)
     assert response["data"] == {"id": 7, "reading_km": 23120, "reading_date": "2026-11-10"}
     assert db.commits == 1
+
+
+def test_values_too_large_for_their_columns_are_refused():
+    with pytest.raises(ValidationError):
+        reading(2**31)
+    with pytest.raises(ValidationError):
+        CarExpenseCreate(date=date(2026, 11, 10), item="Toll", amount=2**63)
+    with pytest.raises(ValidationError):
+        ChargingRecordCreate(
+            charge_date=date(2026, 11, 10), provider="Home", amount=2**63, kwh=10,
+        )
+    assert reading(2**31 - 1).reading_km == 2**31 - 1
 
 
 def test_create_record_returns_a_recent_identical_row_instead_of_inserting():

@@ -48,10 +48,11 @@ CATEGORIES = {
 }
 # Search results show roughly this many characters of a meta description.
 DESCRIPTION_LIMIT = 160
-# The articles are the one part of the site meant to be found by search. The
-# header overrides the site-wide noindex default set in app/main.py, and the
-# `indexable` context flag does the same for the <meta> tag in base.html.
-# Only the two 200 responses below carry them, so a 404 here stays noindex.
+# The articles and the home page (app/main.py) are the parts of the site meant
+# to be found by search. The header overrides the site-wide noindex default set
+# in app/main.py, and the `indexable` context flag does the same for the <meta>
+# tag in base.html. Here only the two 200 responses below carry them, so a 404
+# stays noindex.
 INDEXABLE_HEADERS = {"X-Robots-Tag": "all"}
 SEGMENT = re.compile(r"[\w]+(?:-[\w]+)*", re.UNICODE)
 

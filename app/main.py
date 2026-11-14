@@ -134,8 +134,9 @@ def set_security_headers(response) -> None:
     )
     # Keep the site out of search indexes by default. As a header rather than
     # only a <meta> tag, this also covers the JSON API and static assets, which
-    # cannot carry meta tags. The article pages are the exception: they set
-    # their own X-Robots-Tag (app/posts.py), which setdefault() leaves alone.
+    # cannot carry meta tags. The home page and the article pages are the
+    # exception: they set their own X-Robots-Tag (posts.INDEXABLE_HEADERS),
+    # which setdefault() leaves alone.
     # robots.txt deliberately still allows search engines to fetch every page —
     # a crawler that is blocked can never read this directive, and
     # already-indexed URLs would linger instead of being dropped.
@@ -273,9 +274,9 @@ AI_CRAWLERS = (
 )
 
 ROBOTS_TXT = (
-    "# Personal project site. Only the articles are meant to be indexed, by\n"
-    "# search engines and AI search alike. None of its content may be used for\n"
-    "# AI training.\n"
+    "# Personal project site. Only the home page and the articles are meant to\n"
+    "# be indexed, by search engines and AI search alike. None of its content\n"
+    "# may be used for AI training.\n"
     "#\n"
     "# Search engines may crawl everything: the pages that should stay out of\n"
     "# the index say so with X-Robots-Tag: noindex, and a blocked crawler\n"
@@ -302,8 +303,10 @@ def robots_txt():
 @app.get("/sitemap.xml")
 @limiter.exempt
 def sitemap_xml():
-    """The indexable pages only: the article lists and the articles."""
-    urls = "".join(
+    """The indexable pages only: the home page, the article lists and the
+    articles. The home page has no date of its own, so it goes without a
+    lastmod rather than with a made-up one."""
+    urls = f"<url><loc>{escape(absolute_url('/'))}</loc></url>\n" + "".join(
         f"<url><loc>{escape(absolute_url(path))}</loc>"
         f"<lastmod>{modified.isoformat()}</lastmod></url>\n"
         for path, modified in posts.sitemap_entries()

@@ -38,13 +38,18 @@ from app.utils import (
 # endpoint is protected without having to remember to ask for it.
 router = APIRouter(dependencies=[Depends(verify_shortcut_api_key)])
 RecordLabel = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+# The largest values the columns hold (bigint amounts, integer reading_km, see
+# schema.sql). Anything above is refused here as a 422, instead of failing in
+# Postgres as a 500.
+Amount = Annotated[int, Field(ge=0, le=2**63 - 1)]
+ReadingKm = Annotated[int, Field(ge=0, le=2**31 - 1)]
 
 
 class ChargingRecordCreate(BaseModel):
     """Payload for creating a charging record (Tesla Supercharger, etc.)."""
     charge_date: date
     provider: RecordLabel
-    amount: int = Field(ge=0)
+    amount: Amount
     kwh: float = Field(ge=0, allow_inf_nan=False)
 
 
@@ -52,12 +57,12 @@ class CarExpenseCreate(BaseModel):
     """Payload for recording a car-related expense (insurance, maintenance, etc.)."""
     date: date
     item: RecordLabel
-    amount: int = Field(ge=0)
+    amount: Amount
 
 
 class OdometerReadingCreate(BaseModel):
     """Payload for logging a total-odometer reading (the number shown on the car screen)."""
-    reading_km: int = Field(ge=0)
+    reading_km: ReadingKm
     # get_today (not date.today) so the default respects APP_TIMEZONE, matching
     # every other date computation in the app (server clock runs on UTC).
     reading_date: date = Field(default_factory=get_today)
@@ -229,7 +234,9 @@ def get_period_summary(db: Session):
         result[key] = {
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
-            "is_partial": end == today,
+            # Only the month is still filling up; the trailing windows are
+            # always their full length.
+            "is_partial": key == "current_month",
             "total_cost": float(row["charging_cost"]) + float(row["non_charging_cost"]),
             "km_driven": km,
             "measured_from": span_from.isoformat() if km else None,

@@ -22,7 +22,7 @@
 
     {# Also sent as an X-Robots-Tag header (app/main.py); the tag is here too
        because it is what most crawlers and audit tools look at first.
-       Everything is noindex unless the view passes indexable (app/posts.py).
+       Everything is noindex unless the view passes indexable (main.home and app/posts.py).
        Indexable pages name their canonical URL instead, so a copy reached
        through another hostname or with a query string isn't indexed twice. #}
     {% if indexable %}
