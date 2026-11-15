@@ -7,7 +7,7 @@
     <p class="post-meta">{{ time_tag(post.date) }}
         {%- if post.updated != post.date %} · Updated {{ time_tag(post.updated) }}{% endif %}</p>
     {% if not post.has_title %}<h1>{{ post.title }}</h1>{% endif %}
-    {% if post.image %}<img class="post-image" src="{{ static_url(post.image) }}" alt="{{ post.image_alt }}">{% endif %}
+    {% if image %}<img class="post-image" src="{{ static_url(image) }}" alt="{{ image_alt }}">{% endif %}
     <div class="post-content">{{ post.html }}</div>
     {% if related %}
     <nav class="related-posts" aria-label="Related posts">

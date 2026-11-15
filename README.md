@@ -97,6 +97,8 @@ paragraph, up to 160 characters.
 `image: kyoto.jpg`): it is shown under the article's title and replaces the
 site-wide share image in that article's link preview, and `image_alt` describes
 it. To replace an image, use a new file name — the old one is cached for a year.
+A category can name a default image in `CATEGORIES`, shown on each of its
+articles that sets none; every Kintone article shows the share image this way.
 `updated` is the date of the last revision: it is shown beside the publish
 date and feeds the sitemap's `lastmod` and the JSON-LD `dateModified`. Categories
 are declared in `CATEGORIES` in `app/posts.py` (currently just `kintone`), and

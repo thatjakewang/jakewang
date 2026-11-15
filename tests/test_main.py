@@ -159,6 +159,13 @@ def test_missing_trailing_slash_redirects_permanently():
     assert urlsplit(response.headers["location"]).path == "/kintone/"
 
 
+def test_kintone_articles_show_the_category_image_under_the_title():
+    post = next(p for p in posts.get_posts() if p.category == "kintone")
+    body = request("GET", post.url).body.decode()
+    image = body.index('<img class="post-image" src="/static/images/share.png')
+    assert body.index("<h1>") < image < body.index('<div class="post-content">')
+
+
 def test_unknown_page_gets_the_html_error_page():
     response = request("GET", "/nope")
     assert response.status == 404

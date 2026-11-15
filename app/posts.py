@@ -24,7 +24,14 @@ from fastapi.responses import HTMLResponse
 from markupsafe import Markup
 from yaml import YAMLError
 
-from app.templating import BASE_DIR, absolute_url, share_image_url, static_url, templates
+from app.templating import (
+    BASE_DIR,
+    SHARE_IMAGE,
+    absolute_url,
+    share_image_url,
+    static_url,
+    templates,
+)
 
 logger = logging.getLogger(__name__)
 POSTS_DIR = BASE_DIR / "posts"
@@ -38,6 +45,10 @@ class Category:
     heading: str = ""
     # Meta description of the list page.
     description: str = ""
+    # Path under static/ of the image shown under the title of every article
+    # in the category that sets no image of its own; none when empty.
+    image: str = ""
+    image_alt: str = ""
 
 
 CATEGORIES = {
@@ -45,6 +56,9 @@ CATEGORIES = {
         label="Kintone",
         heading="Kintone JavaScript Customization Guides",
         description="Short how-to posts on customizing Kintone apps with JavaScript and CSS.",
+        # The site-wide share image, which is the Kintone banner.
+        image=SHARE_IMAGE,
+        image_alt="Kintone JavaScript Customization Guides by Jake Wang",
     ),
 }
 # Search results show roughly this many characters of a meta description.
@@ -292,6 +306,9 @@ def _category_router(slug: str, category: Category) -> APIRouter:
                 "structured_data": _structured_data(post, category.label),
                 "indexable": True,
                 "post": post,
+                # The article's own image, else the category's.
+                "image": post.image or category.image,
+                "image_alt": post.image_alt if post.image else category.image_alt,
                 "related": related_posts(post, all_posts),
                 "category_label": category.label,
                 "category_url": f"/{slug}/",
