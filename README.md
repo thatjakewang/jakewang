@@ -52,7 +52,7 @@ app/
   posts.py         # Markdown articles: parsing, validation, category routes
 posts/             # the articles, one folder per category (posts/kintone/*.md)
 templates/         # Jinja page shells (base, about, dashboard, article list + page, error) and shared macros
-static/            # The JS/CSS the browser gets, plus favicons — no build step
+static/            # The JS/CSS the browser gets, plus favicons and article images — no build step
 tests/             # pytest: period maths, write rules, article parsing, response headers and error pages
 schema.sql         # reference DDL for rebuilding the database
 ```
@@ -113,8 +113,8 @@ routes send `X-Robots-Tag: all` and pass `indexable` to the template, which
 drops the `noindex` meta tag and adds a canonical link and a meta description.
 Article pages also carry schema.org JSON-LD (`BlogPosting` and
 `BreadcrumbList`), and indexable pages carry Open Graph tags for link
-previews, all using one share image (`static/images/share.png`, drawn from
-`share.svg` beside it). Every page has the Google Search Console verification tag.
+previews, using one share image (`static/images/share.png`, drawn from
+`share.svg` beside it) unless an article sets an `image` of its own. Every page has the Google Search Console verification tag.
 Everything else, including a 404 under `/kintone/`, keeps the site-wide
 `noindex, nofollow`. Canonical links and the sitemap
 are built from `SITE_URL`, never from the request's hostname.

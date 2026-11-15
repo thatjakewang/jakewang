@@ -164,8 +164,8 @@ footer {
 
 /* =========================================
    5. Header & Navigation
-   Full-bleed sticky bar (x.ai-style shell, light theme).
-   Desktop: horizontal nav.
+   Full-bleed sticky bar (x.ai-style shell), in both themes.
+   Desktop: horizontal nav, theme toggle, GitHub button.
    Mobile (≤720px): hamburger → full-viewport menu.
    ========================================= */
 .site-header {
@@ -613,7 +613,8 @@ body.nav-open {
     font-size: 0.9rem;
 }
 
-/* Category list */
+/* Article list: the category pages (date above title) and, with
+   .post-list-compact, the home page */
 .post-list {
     list-style: none;
     padding: 0;

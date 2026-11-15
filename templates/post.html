@@ -1,3 +1,7 @@
+{# One article (posts.post_detail): back link, dates, title, the optional
+   image, the body rendered from Markdown, and up to three related posts.
+   `image` is the article's own image or its category's default; the title is
+   left out when the Markdown body already has an <h1>. #}
 {% extends "base.html" %}
 {% from "macros.html" import time_tag %}
 

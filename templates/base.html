@@ -7,8 +7,13 @@
 
   Views pass meta_title, optionally meta_description, og_type and
   structured_data (a dict rendered as JSON-LD), and indexable=True on
-  the pages search engines may index (the home page and the articles). Jinja globals from
-  app/templating.py: static_url(), current_year(), absolute_url(), share_image_url().
+  the pages search engines may index (the home page and the articles). An
+  article with an image of its own also passes og_image and og_image_alt.
+  Jinja globals from app/templating.py: static_url(), current_year(),
+  absolute_url(), share_image_url().
+
+  Three scripts in all: theme.js (light / dark, in <head>), nav.js (mobile
+  menu), and the dashboard's tesla.js. The CSP allows no inline scripts.
 #}
 <!DOCTYPE html>
 <html lang="en">
