@@ -507,46 +507,60 @@ body.nav-open {
 }
 
 /* =========================================
-   6. Home Page Blocks
+   6. About / Résumé
    ========================================= */
 
-/* Contact links under the intro (About) */
+/* Contact links under the intro */
 .contact-links {
     margin: 0 0 16px;
     font-size: 0.95rem;
 }
 
-/* Project list (About) */
-.project-preview {
+/* One entry under Experience, Education or Projects: a title, then a meta
+   line, a description or bullet points. */
+.resume-entry {
     padding: 14px 0;
     border-bottom: 1px solid var(--border-color);
 }
 
-.project-preview:last-of-type {
+.resume-entry:last-of-type {
     border-bottom: none;
 }
 
-.project-preview h3 {
+.resume-entry h3 {
     margin: 0;
     font-size: 1.1rem;
 }
 
-.project-preview h3 a {
+.resume-entry h3 a {
     color: var(--heading-color);
 }
 
-.project-preview h3 a:hover {
+.resume-entry h3 a:hover {
     color: var(--link-color);
 }
 
-.project-desc {
+.resume-entry-meta {
+    margin: 2px 0 0;
+    color: var(--meta-color);
+    font-size: 0.9rem;
+}
+
+.resume-entry-desc {
     margin: 4px 0 0;
     color: var(--muted-color);
     font-size: 0.95rem;
     line-height: 1.55;
 }
 
-/* Skills list (About) */
+.resume-entry ul {
+    margin: 8px 0 0;
+    padding-left: 1.2rem;
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+
+/* Skills list */
 .skill-list {
     margin: 0;
 }
@@ -1191,36 +1205,11 @@ body.nav-open {
 }
 
 /* =========================================
-   10. About / Résumé
+   10. Print
    ========================================= */
-.resume-entry {
-    padding: 14px 0;
-    border-bottom: 1px solid var(--border-color);
-}
 
-.resume-entry:last-of-type {
-    border-bottom: none;
-}
-
-.resume-entry h3 {
-    margin: 0;
-    font-size: 1.1rem;
-}
-
-.resume-entry-meta {
-    margin: 2px 0 0;
-    color: var(--meta-color);
-    font-size: 0.9rem;
-}
-
-.resume-entry ul {
-    margin: 8px 0 0;
-    padding-left: 1.2rem;
-    font-size: 0.95rem;
-    line-height: 1.55;
-}
-
-/* Printed or saved as a PDF, the page is the résumé alone. */
+/* Printed or saved as a PDF, a page is its content alone — the about page
+   becomes the résumé. */
 @media print {
     .site-header,
     footer {

@@ -64,10 +64,8 @@ class Post:
     category: str
     slug: str
     html: Markup
+    # The body has an <h1> of its own, so the page doesn't print the title again.
     has_title: bool
-    authors: tuple[str, ...]
-    venue: str
-    doi: str
     tags: tuple[str, ...]
     description: str
     updated: date
@@ -125,24 +123,16 @@ def _parse_post(path: Path) -> Post:
     slug = source.get("slug", re.sub(r"[^\w]+", "-", path.stem.lower()).strip("-"))
     if not isinstance(slug, str) or not SEGMENT.fullmatch(slug):
         raise ValueError("slug must contain words separated by hyphens")
-    authors = source.get("authors", [])
-    if not isinstance(authors, list) or not all(isinstance(a, str) for a in authors):
-        raise ValueError("authors must be a list of strings")
     tags = source.get("tags", [])
     if not isinstance(tags, list) or not all(isinstance(t, str) and t.strip() for t in tags):
         raise ValueError("tags must be a list of nonempty strings")
-    for key in ("venue", "doi", "description"):
-        if not isinstance(source.get(key, ""), str):
-            raise ValueError(f"{key} must be a string")
+    description = source.get("description", "")
+    if not isinstance(description, str):
+        raise ValueError("description must be a string")
     html = markdown.markdown(
         source.content, extensions=["tables", "fenced_code", "codehilite"],
         extension_configs={"codehilite": {"guess_lang": False}}, output_format="html",
     )
-
-    # Existing articles may already include their title and bibliographic
-    # details. Keep their body intact and only supply missing header fields.
-    def included(label: str) -> bool:
-        return bool(re.search(rf"<strong>{label}:?</strong>", html, re.IGNORECASE))
 
     return Post(
         title=title.strip(),
@@ -151,11 +141,8 @@ def _parse_post(path: Path) -> Post:
         slug=slug,
         html=Markup(html),
         has_title=bool(re.search(r"<h1(?:\s|>)", html)),
-        authors=() if included("Authors") else tuple(authors),
-        venue="" if included("Venue") else source.get("venue", ""),
-        doi="" if included("DOI") else source.get("doi", ""),
         tags=tuple(dict.fromkeys(t.strip() for t in tags)),
-        description=source.get("description", "").strip() or _first_paragraph(html),
+        description=description.strip() or _first_paragraph(html),
         updated=updated,
     )
 
@@ -220,7 +207,6 @@ def related_posts(post: Post, posts: list[Post], limit: int = 3) -> list[Post]:
 def _structured_data(post: Post, label: str) -> dict:
     """schema.org JSON-LD for an article: the post itself and its breadcrumb."""
     url = absolute_url(post.url)
-    authors = post.authors or ("Jake Wang",)
     return {
         "@context": "https://schema.org",
         "@graph": [
@@ -235,7 +221,7 @@ def _structured_data(post: Post, label: str) -> dict:
                 "mainEntityOfPage": url,
                 "inLanguage": "en",
                 "keywords": list(post.tags),
-                "author": [{"@type": "Person", "name": name} for name in authors],
+                "author": {"@type": "Person", "name": "Jake Wang"},
             },
             {
                 "@type": "BreadcrumbList",

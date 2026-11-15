@@ -1,9 +1,9 @@
 {# Tesla cost dashboard (main.tesla_dashboard), rendered server-side.
 
    Every number below comes from get_dashboard(), resolved in one DB session
-   before this template runs. The only JavaScript is static/js/tesla.js, which
-   switches between the Period Performance panels — all of them are already in
-   the HTML. #}
+   before this template runs. The page's own script, static/js/tesla.js, only
+   chooses what is shown: the Period Performance panels and both chart views
+   are already in the HTML. #}
 {% extends 'base.html' %}
 
 {# KPI card grid: cards is a list of (label, value, meta) triples. Local to
