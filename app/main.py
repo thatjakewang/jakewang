@@ -342,9 +342,13 @@ def health_check(db: Session = Depends(get_db)):
     return {"status": "ok", "database": "ok"}
 
 
+# How many of the newest articles the home page lists under Writing.
+HOME_RECENT_POSTS = 3
+
+
 @app.get("/")
 def home(request: Request):
-    """Landing page: intro, projects, and skills.
+    """Landing page: a short pitch, selected work, and the latest articles.
 
     Indexable like the articles, so a search for the name finds the site, and
     crawlers follow its links on to the articles.
@@ -354,12 +358,14 @@ def home(request: Request):
         name="index.html",
         headers=posts.INDEXABLE_HEADERS,
         context={
-            "meta_title": "Jake Wang – Data Projects",
+            "meta_title": "Jake Wang – Data Analyst",
             "meta_description": (
-                "Jake Wang's data projects: a live Tesla Model 3 cost tracker "
-                "and how-to posts on customizing Kintone apps with JavaScript and CSS."
+                "Jake Wang is a data analyst finishing an MSc in Data Science in "
+                "July 2027. Selected work, including a live Tesla Model 3 cost "
+                "tracker, and Kintone how-to posts."
             ),
             "indexable": True,
+            "recent_posts": posts.get_posts()[:HOME_RECENT_POSTS],
         },
     )
 

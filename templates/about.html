@@ -78,7 +78,7 @@
 <section class="intro">
     <h1>Jake Wang</h1>
     <p class="subtitle">{{ headline }}</p>
-    <p class="resume-contact">
+    <p class="contact-links">
         {% for label, url in contacts %}<a href="{{ url }}">{{ label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
         {% if resume_pdf %} · <a href="{{ static_url(resume_pdf) }}">Download PDF</a>{% endif %}
     </p>

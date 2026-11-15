@@ -92,6 +92,17 @@ def test_only_the_home_page_and_articles_are_indexable():
     assert request("GET", "/kintone/nope/").headers["x-robots-tag"] == "noindex, nofollow"
 
 
+def test_home_lists_the_newest_articles_and_skips_empty_contacts():
+    body = request("GET", "/").body.decode()
+    newest = posts.get_posts()[:4]
+    for post in newest[:3]:
+        assert f'href="{post.url}"' in body
+    assert f'href="{newest[3].url}"' not in body
+    # A contact without an address is left out, not linked to nothing.
+    contacts = body.split('<p class="contact-links">')[1].split("</p>")[0]
+    assert "github.com" in contacts and 'href=""' not in contacts
+
+
 def test_the_about_page_is_unlisted():
     about = request("GET", "/about/")
     assert about.status == 200
