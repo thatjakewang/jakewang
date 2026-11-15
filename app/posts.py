@@ -262,7 +262,7 @@ def _category_router(slug: str, category: Category) -> APIRouter:
                 "meta_description": category.description,
                 "indexable": True,
                 "heading": heading,
-                "category_label": category.label,
+                "categories": CATEGORIES,
                 "posts": [p for p in get_posts() if p.category == slug],
             },
         )

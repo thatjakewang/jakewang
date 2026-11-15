@@ -51,7 +51,7 @@ app/
   tesla.py         # the writes and their undo, and the queries behind the dashboard
   posts.py         # Markdown articles: parsing, validation, category routes
 posts/             # the articles, one folder per category (posts/kintone/*.md)
-templates/         # Jinja page shells (base, home, dashboard, article list + page, error) and shared macros
+templates/         # Jinja page shells (base, about, dashboard, article list + page, error) and shared macros
 static/            # The JS/CSS the browser gets, plus favicons — no build step
 tests/             # pytest: period maths, write rules, article parsing, response headers and error pages
 schema.sql         # reference DDL for rebuilding the database
@@ -382,7 +382,7 @@ writes it is not retry-safe — calling it twice deletes two records.
 
 | Path | Description |
 |------|-------------|
-| `/` | Home — short pitch, contact links, selected work, the three newest articles |
+| `/` | Home — every article from every category, newest first |
 | `/about/` | About and résumé — unlisted: nothing links to it, and it is `noindex` and absent from the sitemap. Edit the `{% set %}` blocks at the top of `templates/about.html` |
 | `/mytesla/` | Tesla cost dashboard, server-rendered |
 | `/kintone/` | Kintone articles, newest first |

@@ -419,13 +419,13 @@ body.nav-open {
    6. Home Page Blocks
    ========================================= */
 
-/* Contact links under the intro (Home, About) */
+/* Contact links under the intro (About) */
 .contact-links {
     margin: 0 0 16px;
     font-size: 0.95rem;
 }
 
-/* Project and article lists (Home, About) */
+/* Project list (About) */
 .project-preview {
     padding: 14px 0;
     border-bottom: 1px solid var(--border-color);
@@ -453,12 +453,6 @@ body.nav-open {
     color: var(--muted-color);
     font-size: 0.95rem;
     line-height: 1.55;
-}
-
-/* Link to the full list, under a short one (Home) */
-.more-link {
-    margin: 14px 0 0;
-    font-size: 0.95rem;
 }
 
 /* Skills list (About) */
