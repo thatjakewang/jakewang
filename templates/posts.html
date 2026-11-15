@@ -1,6 +1,6 @@
 {# A list of articles, newest first: the home page (every category, with a
-   subtitle) and each category's list page. The home page passes `compact`:
-   one line per article, the date in front of the title. #}
+   subtitle) and each category's list page. One line per article, the date
+   in front of the title. #}
 {% extends "base.html" %}
 {% from "macros.html" import time_tag %}
 
@@ -8,7 +8,7 @@
 <section class="posts-page">
     <h1>{{ heading }}</h1>
     {% if subtitle %}<p class="subtitle">{{ subtitle }}</p>{% endif %}
-    <ul class="post-list{% if compact %} post-list-compact{% endif %}">
+    <ul class="post-list">
         {% for post in posts %}
         <li>
             {{ time_tag(post.date) }}

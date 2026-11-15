@@ -108,8 +108,8 @@ def test_home_lists_every_article_newest_first():
     body = request("GET", "/").body.decode()
     positions = [body.index(f'href="{post.url}"') for post in posts.get_posts()]
     assert positions and positions == sorted(positions)
-    # One line per article here; the category pages put the date above.
-    assert 'class="post-list post-list-compact"' in body
+    # The category pages list their articles the same way.
+    assert 'class="post-list"' in body
     assert 'class="post-list"' in request("GET", "/kintone/").body.decode()
 
 

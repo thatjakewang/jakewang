@@ -363,7 +363,6 @@ def home(request: Request):
             "indexable": True,
             "heading": "Jake Wang",
             "subtitle": "Data analyst. Notes on what I build and learn.",
-            "compact": True,
             "posts": posts.get_posts(),
         },
     )
