@@ -92,6 +92,18 @@ def test_only_the_home_page_and_articles_are_indexable():
     assert request("GET", "/kintone/nope/").headers["x-robots-tag"] == "noindex, nofollow"
 
 
+def test_pages_default_to_light_and_load_the_theme_script_first():
+    body = request("GET", "/").body.decode()
+    # Light is the default: the server never sets a theme on <html>.
+    assert '<html lang="en">' in body
+    assert '<button type="button" class="theme-toggle"' in body
+    # Not deferred, and ahead of the stylesheet, so a saved dark theme is set
+    # before anything is painted.
+    script = body.index("/static/js/theme.js")
+    assert script < body.index("/static/css/style.css")
+    assert "defer" not in body[script:body.index("</script>", script)]
+
+
 def test_home_lists_every_article_newest_first():
     body = request("GET", "/").body.decode()
     positions = [body.index(f'href="{post.url}"') for post in posts.get_posts()]

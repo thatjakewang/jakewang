@@ -27,9 +27,41 @@
     --badge-border: #fed7c3;
     --series-charging: #2a78d6; /* chart series; text never wears these */
     --series-other: #eb6834;
+    --header-bg: rgba(255, 255, 255, 0.92); /* translucent sticky header */
+    --hover-tint: rgba(0, 0, 0, 0.04);      /* chart column under the pointer */
+    --shadow-color: rgba(0, 0, 0, 0.08);
     --mono-font: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
     --container-width: 740px;
     --container-gutter: 20px;
+    color-scheme: light; /* the browser's own controls and scrollbars */
+}
+
+/* Dark theme. Light is the default; static/js/theme.js sets data-theme on
+   <html> once the visitor picks dark with the header's toggle. Only colors
+   change, so every rule below this block serves both themes. The page
+   background is also in theme.js, for the browser's theme-color. */
+:root[data-theme="dark"] {
+    --bg-color: #15171c;
+    --text-color: #d4d7dd;
+    --heading-color: #f1f3f5;
+    --link-color: #fb923c;
+    --link-hover: #fdba74;
+    --border-color: #2a2e37;
+    --border-strong: #3a3f4b;
+    --code-block-bg: #1b1e26;
+    --code-block-border: #2a2e37;
+    --code-inline-bg: #262a33;
+    --muted-color: #a3a8b3;
+    --meta-color: #8f95a1;
+    --subtle-bg: #1c1f26;
+    --badge-bg: #2e1d12;
+    --badge-border: #5a3418;
+    --series-charging: #4c93e6;
+    --series-other: #f07f4c;
+    --header-bg: rgba(21, 23, 28, 0.92);
+    --hover-tint: rgba(255, 255, 255, 0.06);
+    --shadow-color: rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
 }
 
 /* =========================================
@@ -56,7 +88,7 @@ a:hover {
 }
 
 /* Keyboard focus ring for the custom buttons */
-:is(.nav-toggle, .period-tab, .cost-column):focus-visible {
+:is(.nav-toggle, .theme-toggle, .period-tab, .cost-column):focus-visible {
     outline: 2px solid var(--heading-color);
     outline-offset: 2px;
 }
@@ -145,7 +177,7 @@ footer {
     top: 0;
     z-index: 100;
     width: 100%;
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--header-bg);
     backdrop-filter: saturate(180%) blur(12px);
     -webkit-backdrop-filter: saturate(180%) blur(12px);
     border-bottom: 1px solid var(--border-color);
@@ -217,10 +249,50 @@ footer {
     font-weight: 400; /* still light; active via color only, no underline */
 }
 
+/* Light / dark switch (static/js/theme.js). The moon shows in the light
+   theme and the sun in the dark one: each is the theme a click leads to. The
+   text label is for the mobile menu, where the button is a full row. */
+.theme-toggle {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted-color);
+    font: inherit;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.theme-toggle:hover {
+    color: var(--heading-color);
+    background: var(--subtle-bg);
+}
+
+.theme-toggle svg {
+    width: 18px;
+    height: 18px;
+}
+
+.theme-toggle-label,
+.theme-toggle .theme-for-dark,
+:root[data-theme="dark"] .theme-toggle .theme-for-light {
+    display: none;
+}
+
+:root[data-theme="dark"] .theme-toggle svg.theme-for-dark {
+    display: block;
+}
+
 /* Outline CTA — external profile, not a product funnel */
 .header-cta {
     flex-shrink: 0;
-    margin-left: auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -402,6 +474,25 @@ body.nav-open {
     .nav-link.is-active {
         color: var(--heading-color);
         opacity: 1;
+    }
+
+    /* A full row with its label, under the links */
+    .theme-toggle {
+        justify-content: flex-start;
+        width: 100%;
+        height: auto;
+        padding: 10px 2px;
+        font-size: 1rem;
+        font-weight: 300;
+    }
+
+    .theme-toggle:hover {
+        background: transparent;
+    }
+
+    .theme-toggle-label.theme-for-light,
+    :root[data-theme="dark"] .theme-toggle-label.theme-for-dark {
+        display: inline;
     }
 
     .header-cta {
@@ -894,7 +985,7 @@ body.nav-open {
 
 .cost-column:hover,
 .cost-column:focus-visible {
-    background: rgba(0, 0, 0, 0.04);
+    background: var(--hover-tint);
 }
 
 /* The bar's height is the month's total; the segments share it in
@@ -945,7 +1036,7 @@ body.nav-open {
     border: 1px solid var(--border-strong);
     border-radius: 6px;
     background: var(--bg-color);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px var(--shadow-color);
     color: var(--muted-color);
     font-size: 12px;
     line-height: 1.6;

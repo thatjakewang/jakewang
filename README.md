@@ -61,8 +61,9 @@ The dashboard is rendered server-side: `/mytesla/` calls `get_dashboard()`,
 which resolves twelve queries in one session, and Jinja prints the numbers
 straight into the HTML. The page
 ships one small script of its own, `static/js/tesla.js` for the period
-switch, the chart's view switch and its hover readout; the only other script on the site is `static/js/nav.js` for the
-mobile menu. Nothing needs a redeploy when new
+switch, the chart's view switch and its hover readout; the only other scripts on the site are `static/js/nav.js` for the
+mobile menu and `static/js/theme.js` for the light and dark themes (light by
+default; the header's toggle switches, and the choice is kept in the browser). Nothing needs a redeploy when new
 records land, and nothing needs a second round trip either. It is KPI figures,
 tables and one chart.
 

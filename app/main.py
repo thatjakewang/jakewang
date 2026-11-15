@@ -104,7 +104,7 @@ STATIC_CACHE_MAX_AGE = int(timedelta(days=365).total_seconds())
 ERROR_PAGES = {404: "Page Not Found", 500: "Internal Server Error"}
 
 
-# Everything the pages load is same-origin: two scripts, one stylesheet, the
+# Everything the pages load is same-origin: three scripts, one stylesheet, the
 # favicons. Inline style attributes stay allowed because the Markdown tables
 # extension emits them for column alignment; inline scripts do not.
 CONTENT_SECURITY_POLICY = (
