@@ -23,8 +23,6 @@
     --muted-color: #666666;     /* subtitles, quotes */
     --meta-color: #707070;      /* dates, footer text */
     --subtle-bg: #fafafa;       /* zebra rows, hover/card backgrounds */
-    --badge-bg: #fff4ed;        /* category and tag labels, text in --link-color */
-    --badge-border: #fed7c3;
     --series-charging: #2a78d6; /* chart series; text never wears these */
     --series-other: #eb6834;
     --header-bg: rgba(255, 255, 255, 0.92); /* translucent sticky header */
@@ -54,8 +52,6 @@
     --muted-color: #a3a8b3;
     --meta-color: #8f95a1;
     --subtle-bg: #1c1f26;
-    --badge-bg: #2e1d12;
-    --badge-border: #5a3418;
     --series-charging: #4c93e6;
     --series-other: #f07f4c;
     --header-bg: rgba(21, 23, 28, 0.92);
@@ -660,14 +656,13 @@ body.nav-open {
     margin: 0;
 }
 
-.post-badge {
-    margin-left: 8px;
-    padding: 1px 8px;
-    border: 1px solid var(--badge-border);
-    border-radius: 999px;
-    background: var(--badge-bg);
-    color: var(--link-color);
-    font-size: 0.8rem;
+/* An article's optional image, under the title */
+.post-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 8px 0 28px;
+    border-radius: 4px;
 }
 
 /* Article body — the HTML rendered from Markdown */

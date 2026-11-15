@@ -108,9 +108,9 @@ def test_home_lists_every_article_newest_first():
     body = request("GET", "/").body.decode()
     positions = [body.index(f'href="{post.url}"') for post in posts.get_posts()]
     assert positions and positions == sorted(positions)
-    # No category or tag labels here; the category pages keep them.
-    assert "post-badge" not in body
-    assert '<span class="post-badge">Kintone</span>' in request("GET", "/kintone/").body.decode()
+    # One line per article here; the category pages put the date above.
+    assert 'class="post-list post-list-compact"' in body
+    assert 'class="post-list"' in request("GET", "/kintone/").body.decode()
 
 
 def test_the_about_page_is_unlisted():

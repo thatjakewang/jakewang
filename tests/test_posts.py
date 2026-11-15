@@ -46,6 +46,15 @@ def test_description_from_front_matter(tmp_path):
     assert read(tmp_path, VALID + "\ndescription: Short summary.").description == "Short summary."
 
 
+def test_image_is_optional_and_must_be_a_file_name(tmp_path):
+    assert read(tmp_path, VALID).image == ""
+    post = read(tmp_path, VALID + "\nimage: kyoto.jpg\nimage_alt: A temple gate")
+    assert (post.image, post.image_alt) == ("images/posts/kyoto.jpg", "A temple gate")
+    # A path or a non-image is refused, and the article is skipped.
+    assert read(tmp_path, VALID + "\nimage: ../secret.jpg", name="path.md") is None
+    assert read(tmp_path, VALID + "\nimage: notes.txt", name="text.md") is None
+
+
 def test_updated_defaults_to_the_publish_date(tmp_path):
     assert read(tmp_path, VALID).updated == date(2026, 11, 4)
     assert read(tmp_path, VALID + "\nupdated: 2026-11-10").updated == date(2026, 11, 10)

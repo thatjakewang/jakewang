@@ -90,9 +90,13 @@ The panel prints the reading dates it used.
 ### Articles
 
 An article is a Markdown file under `posts/<category>/` with `title`, `date`
-and `category` in its front matter; `slug`, `tags`, `description` and
-`updated` are optional. The meta description defaults to the opening sentences of the first
+and `category` in its front matter; `slug`, `tags`, `description`,
+`updated`, `image` and `image_alt` are optional. The meta description defaults to the opening sentences of the first
 paragraph, up to 160 characters.
+`image` is the name of a file in `static/images/posts/` (for example
+`image: kyoto.jpg`): it is shown under the article's title and replaces the
+site-wide share image in that article's link preview, and `image_alt` describes
+it. To replace an image, use a new file name — the old one is cached for a year.
 `updated` is the date of the last revision: it is shown beside the publish
 date and feeds the sitemap's `lastmod` and the JSON-LD `dateModified`. Categories
 are declared in `CATEGORIES` in `app/posts.py` (currently just `kintone`), and

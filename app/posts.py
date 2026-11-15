@@ -1,11 +1,12 @@
 """Category pages for trusted, repository-owned Markdown articles.
 
 Add categories to CATEGORIES, then set title, date and category in front matter.
-An optional slug overrides the filename-derived URL, optional tags label
-the article in category lists, an optional description replaces the first
-paragraph as the meta description, and an optional updated date records the
-last revision. File changes invalidate the bounded parsing
-cache; adding or deleting a file needs no process restart.
+An optional slug overrides the filename-derived URL, optional tags decide
+which articles are listed as related, an optional description replaces the first
+paragraph as the meta description, an optional updated date records the
+last revision, and an optional image (with image_alt) is shown under the title.
+File changes invalidate the bounded parsing cache; adding or deleting a file
+needs no process restart.
 """
 
 import html as html_lib
@@ -23,7 +24,7 @@ from fastapi.responses import HTMLResponse
 from markupsafe import Markup
 from yaml import YAMLError
 
-from app.templating import BASE_DIR, absolute_url, share_image_url, templates
+from app.templating import BASE_DIR, absolute_url, share_image_url, static_url, templates
 
 logger = logging.getLogger(__name__)
 POSTS_DIR = BASE_DIR / "posts"
@@ -31,7 +32,7 @@ POSTS_DIR = BASE_DIR / "posts"
 
 @dataclass(frozen=True)
 class Category:
-    # The short name used in navigation and badges.
+    # The short name: the back link on an article, and the breadcrumb.
     label: str
     # Heading (<h1> and <title>) of the category's list page; the label when empty.
     heading: str = ""
@@ -55,6 +56,9 @@ DESCRIPTION_LIMIT = 160
 # stays noindex.
 INDEXABLE_HEADERS = {"X-Robots-Tag": "all"}
 SEGMENT = re.compile(r"[\w]+(?:-[\w]+)*", re.UNICODE)
+# An article's optional image: a file name in static/images/posts/, never a path.
+IMAGE_DIR = "images/posts"
+IMAGE_NAME = re.compile(r"\w[\w.-]*\.(?:jpe?g|png|webp|avif|gif)", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -69,6 +73,10 @@ class Post:
     tags: tuple[str, ...]
     description: str
     updated: date
+    # Path under static/ of the image shown below the title and used as the
+    # article's link preview; empty for an article without one.
+    image: str
+    image_alt: str
 
     @property
     def url(self) -> str:
@@ -129,6 +137,12 @@ def _parse_post(path: Path) -> Post:
     description = source.get("description", "")
     if not isinstance(description, str):
         raise ValueError("description must be a string")
+    image = source.get("image", "")
+    if not isinstance(image, str) or (image and not IMAGE_NAME.fullmatch(image)):
+        raise ValueError(f"image must be the name of an image file in static/{IMAGE_DIR}/")
+    image_alt = source.get("image_alt", "")
+    if not isinstance(image_alt, str):
+        raise ValueError("image_alt must be a string")
     html = markdown.markdown(
         source.content, extensions=["tables", "fenced_code", "codehilite"],
         extension_configs={"codehilite": {"guess_lang": False}}, output_format="html",
@@ -144,6 +158,8 @@ def _parse_post(path: Path) -> Post:
         tags=tuple(dict.fromkeys(t.strip() for t in tags)),
         description=description.strip() or _first_paragraph(html),
         updated=updated,
+        image=f"{IMAGE_DIR}/{image}" if image else "",
+        image_alt=image_alt.strip(),
     )
 
 
@@ -204,6 +220,11 @@ def related_posts(post: Post, posts: list[Post], limit: int = 3) -> list[Post]:
     return candidates[:limit]
 
 
+def _image_url(post: Post) -> str:
+    """The article's own image when it has one, else the site-wide share image."""
+    return absolute_url(static_url(post.image)) if post.image else share_image_url()
+
+
 def _structured_data(post: Post, label: str) -> dict:
     """schema.org JSON-LD for an article: the post itself and its breadcrumb."""
     url = absolute_url(post.url)
@@ -214,7 +235,7 @@ def _structured_data(post: Post, label: str) -> dict:
                 "@type": "BlogPosting",
                 "headline": post.title,
                 "description": post.description,
-                "image": share_image_url(),
+                "image": _image_url(post),
                 "datePublished": post.date.isoformat(),
                 "dateModified": post.updated.isoformat(),
                 "url": url,
@@ -248,7 +269,6 @@ def _category_router(slug: str, category: Category) -> APIRouter:
                 "meta_description": category.description,
                 "indexable": True,
                 "heading": heading,
-                "categories": CATEGORIES,
                 "posts": [p for p in get_posts() if p.category == slug],
             },
         )
@@ -267,6 +287,8 @@ def _category_router(slug: str, category: Category) -> APIRouter:
                 "meta_title": post.title,
                 "meta_description": post.description,
                 "og_type": "article",
+                "og_image": _image_url(post) if post.image else None,
+                "og_image_alt": post.image_alt,
                 "structured_data": _structured_data(post, category.label),
                 "indexable": True,
                 "post": post,
