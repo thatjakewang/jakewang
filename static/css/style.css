@@ -538,6 +538,23 @@ body.nav-open {
     color: var(--link-color);
 }
 
+/* Home: one line per article, the date in front of the title */
+.post-list-compact li {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding: 8px 0;
+}
+
+.post-list-compact time {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.post-list-compact h2 {
+    margin: 0;
+}
+
 .post-badge {
     margin-left: 8px;
     padding: 1px 8px;
