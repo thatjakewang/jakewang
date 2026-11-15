@@ -364,6 +364,21 @@ def home(request: Request):
     )
 
 
+@app.get("/about/")
+def about(request: Request):
+    """About page with the résumé. Unlisted on purpose.
+
+    Nothing links here, it is not in the sitemap, and it keeps the site-wide
+    noindex, so it is reached only by its URL. That is obscurity, not access
+    control: anyone with the URL can read it.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="about.html",
+        context={"meta_title": "About – Jake Wang"},
+    )
+
+
 @app.get("/mytesla/")
 def tesla_dashboard(request: Request, db: Session = Depends(get_db)):
     """Tesla cost dashboard, rendered server-side in one DB session.

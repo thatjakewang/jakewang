@@ -92,6 +92,17 @@ def test_only_the_home_page_and_articles_are_indexable():
     assert request("GET", "/kintone/nope/").headers["x-robots-tag"] == "noindex, nofollow"
 
 
+def test_the_about_page_is_unlisted():
+    about = request("GET", "/about/")
+    assert about.status == 200
+    assert about.headers["x-robots-tag"] == "noindex, nofollow"
+    assert b'<meta name="robots" content="noindex, nofollow">' in about.body
+    # Nothing points at it: not the navigation, the home page or the sitemap.
+    assert b"/about/" not in about.body
+    assert b"/about/" not in request("GET", "/").body
+    assert b"/about/" not in request("GET", "/sitemap.xml").body
+
+
 def test_pages_are_cached_briefly_and_static_files_for_a_year():
     assert request("GET", "/").headers["cache-control"] == "public, max-age=60"
     static = request("GET", "/static/css/style.css")

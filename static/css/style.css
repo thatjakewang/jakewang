@@ -1075,3 +1075,51 @@ body.nav-open {
 .error-back {
     margin-top: 20px;
 }
+
+/* =========================================
+   10. About / Résumé
+   ========================================= */
+.resume-contact {
+    margin: 0 0 16px;
+    font-size: 0.95rem;
+}
+
+.resume-entry {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.resume-entry:last-of-type {
+    border-bottom: none;
+}
+
+.resume-entry h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.resume-entry-meta {
+    margin: 2px 0 0;
+    color: var(--meta-color);
+    font-size: 0.9rem;
+}
+
+.resume-entry ul {
+    margin: 8px 0 0;
+    padding-left: 1.2rem;
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+
+/* Printed or saved as a PDF, the page is the résumé alone. */
+@media print {
+    .site-header,
+    footer {
+        display: none;
+    }
+
+    .container {
+        max-width: none;
+        padding: 0;
+    }
+}

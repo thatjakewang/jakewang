@@ -383,6 +383,7 @@ writes it is not retry-safe — calling it twice deletes two records.
 | Path | Description |
 |------|-------------|
 | `/` | Home — intro, project cards, skills |
+| `/about/` | About and résumé — unlisted: nothing links to it, and it is `noindex` and absent from the sitemap. Edit the `{% set %}` blocks at the top of `templates/about.html` |
 | `/mytesla/` | Tesla cost dashboard, server-rendered |
 | `/kintone/` | Kintone articles, newest first |
 | `/kintone/<slug>/` | One article |

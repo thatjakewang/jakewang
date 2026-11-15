@@ -1,0 +1,123 @@
+{# About / résumé (main.about). Unlisted: nothing links here and the page is
+   noindex, so it is found only by its URL. That keeps it out of search, not
+   secret — this file is in a public repository, so leave out anything private
+   (phone number, home address).
+
+   To edit: everything the page shows is in the {% set %} blocks below. Replace
+   the text in [square brackets]; delete an entry, or empty a list, to drop it. #}
+{% extends 'base.html' %}
+
+{% set headline = "Data Analyst · MSc Data Science candidate (July 2027)" %}
+
+{% set summary = "I work in the parking industry as a business, data, and systems engineer — analyzing operations data, writing performance reports for leadership, and maintaining the company's internal Kintone apps. [One or two sentences on the role you are looking for and what you bring to it.]" %}
+
+{# (label, url) — shown in one line under the headline. #}
+{% set contacts = [
+    ("[you@example.com]", "mailto:[you@example.com]"),
+    ("LinkedIn", "[https://www.linkedin.com/in/your-profile]"),
+    ("GitHub", "https://github.com/thatjakewang"),
+] %}
+
+{# A PDF copy to download, as a path under static/ (for example
+   "files/resume.pdf"). Leave empty to show no download link. #}
+{% set resume_pdf = "" %}
+
+{# (title, organization, period, [bullet points]) — newest first. #}
+{% set experience = [
+    ("Data Analyst", "[Company name]", "[2023] – Present", [
+        "[What you analyzed, how, and the result — lead with a number where you can.]",
+        "[A report, dashboard or model you built, and who used it to decide what.]",
+        "[A system or process you improved, and what it saved.]",
+    ]),
+    ("[Previous title]", "[Company name]", "[2021] – [2023]", [
+        "[Achievement.]",
+        "[Achievement.]",
+    ]),
+] %}
+
+{# (degree, school, period, [bullet points]) — newest first. #}
+{% set education = [
+    ("MSc in Data Science", "[University name]", "[2025] – July 2027 (expected)", [
+        "[Relevant courses: machine learning, statistics, ...]",
+        "[Capstone or thesis topic.]",
+    ]),
+    ("[Bachelor's degree]", "[University name]", "[2017] – [2021]", []),
+] %}
+
+{# (name, url, description) — url may be empty. #}
+{% set projects = [
+    ("MyTesla", "/mytesla/",
+     "Live Tesla Model 3 cost tracker: a FastAPI and PostgreSQL app that turns charging, expense and odometer logs into cost-per-km figures."),
+    ("[Project name]", "",
+     "[The question, the data, the method and what you found.]"),
+] %}
+
+{# (group, skills) #}
+{% set skills = [
+    ("Languages", "Python · SQL · JavaScript"),
+    ("Data", "Pandas · NumPy · [others]"),
+    ("ML & Stats", "scikit-learn · [others]"),
+    ("Tools", "Git · PostgreSQL · [others]"),
+] %}
+
+{# One résumé entry: a title line, a meta line, and optional bullet points. #}
+{% macro entry(title, organization, period, points) %}
+<div class="resume-entry">
+    <h3>{{ title }}</h3>
+    <p class="resume-entry-meta">{{ organization }} · {{ period }}</p>
+    {% if points %}
+    <ul>
+        {% for point in points %}<li>{{ point }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% block content %}
+<section class="intro">
+    <h1>Jake Wang</h1>
+    <p class="subtitle">{{ headline }}</p>
+    <p class="resume-contact">
+        {% for label, url in contacts %}<a href="{{ url }}">{{ label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
+        {% if resume_pdf %} · <a href="{{ static_url(resume_pdf) }}">Download PDF</a>{% endif %}
+    </p>
+    <p class="intro-bio">{{ summary }}</p>
+</section>
+
+<section class="content-block" aria-label="Experience">
+    <h2>Experience</h2>
+    {% for title, organization, period, points in experience %}
+    {{ entry(title, organization, period, points) }}
+    {% endfor %}
+</section>
+
+<section class="content-block" aria-label="Education">
+    <h2>Education</h2>
+    {% for degree, school, period, points in education %}
+    {{ entry(degree, school, period, points) }}
+    {% endfor %}
+</section>
+
+<section class="content-block" aria-label="Projects">
+    <h2>Projects</h2>
+    {% for name, url, description in projects %}
+    <div class="project-preview">
+        <h3>{% if url %}<a href="{{ url }}">{{ name }}</a>{% else %}{{ name }}{% endif %}</h3>
+        <p class="project-desc">{{ description }}</p>
+    </div>
+    {% endfor %}
+</section>
+
+<section class="content-block" aria-label="Skills">
+    <h2>Skills</h2>
+    <dl class="skill-list">
+        {% for group, items in skills %}
+        <div class="skill-group">
+            <dt>{{ group }}</dt>
+            <dd>{{ items }}</dd>
+        </div>
+        {% endfor %}
+    </dl>
+</section>
+{% endblock %}
