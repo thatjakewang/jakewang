@@ -1,4 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#111827"/>
-  <path fill="#fff" d="M15 15h8v23c0 8-4 12-12 12H8v-7h3c3 0 4-2 4-5V15Zm11 0h8l4 21 5-21h7l5 21 4-21h8L59 50h-8l-5-20-5 20h-7L26 15Z"/>
+<!-- Pixel-art "JW" on a 16x16 grid: one unit is one pixel. The corner
+     pixels are cut for a rounded look. apple-touch-icon.png is the same
+     drawing at 180px; redraw both together. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <path fill="#111827" d="M1 0h14v1h1v14h-1v1H1v-1H0V1h1z"/>
+  <rect x="3" y="3" width="2" height="1" fill="#ffffff"/>
+  <rect x="6" y="3" width="2" height="1" fill="#ffffff"/>
+  <rect x="9" y="3" width="2" height="1" fill="#ffffff"/>
+  <rect x="12" y="3" width="2" height="1" fill="#ffffff"/>
+  <rect x="3" y="4" width="2" height="1" fill="#ffffff"/>
+  <rect x="6" y="4" width="2" height="1" fill="#ffffff"/>
+  <rect x="9" y="4" width="2" height="1" fill="#ffffff"/>
+  <rect x="12" y="4" width="2" height="1" fill="#ffffff"/>
+  <rect x="3" y="5" width="2" height="1" fill="#ffffff"/>
+  <rect x="6" y="5" width="2" height="1" fill="#ffffff"/>
+  <rect x="9" y="5" width="2" height="1" fill="#ffffff"/>
+  <rect x="12" y="5" width="2" height="1" fill="#ffffff"/>
+  <rect x="3" y="6" width="2" height="1" fill="#ffffff"/>
+  <rect x="6" y="6" width="2" height="1" fill="#ffffff"/>
+  <rect x="9" y="6" width="2" height="1" fill="#ffffff"/>
+  <rect x="12" y="6" width="2" height="1" fill="#ffffff"/>
+  <rect x="3" y="7" width="2" height="1" fill="#ffffff"/>
+  <rect x="6" y="7" width="2" height="1" fill="#ffffff"/>
+  <rect x="9" y="7" width="2" height="1" fill="#ffffff"/>
+  <rect x="12" y="7" width="2" height="1" fill="#ffffff"/>
+  <rect x="3" y="8" width="2" height="1" fill="#ffffff"/>
+  <rect x="6" y="8" width="2" height="1" fill="#ffffff"/>
+  <rect x="9" y="8" width="2" height="1" fill="#ffffff"/>
+  <rect x="12" y="8" width="2" height="1" fill="#ffffff"/>
+  <rect x="2" y="9" width="3" height="1" fill="#ffffff"/>
+  <rect x="6" y="9" width="8" height="1" fill="#ffffff"/>
+  <rect x="2" y="10" width="2" height="1" fill="#ffffff"/>
+  <rect x="7" y="10" width="2" height="1" fill="#ffffff"/>
+  <rect x="11" y="10" width="2" height="1" fill="#ffffff"/>
+  <rect x="2" y="12" width="12" height="1" fill="#fb923c"/>
 </svg>
