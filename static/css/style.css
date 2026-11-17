@@ -613,31 +613,31 @@ body.nav-open {
     font-size: 0.9rem;
 }
 
-/* Article list (home and category pages): one line per article, the date
-   in front of the title */
+/* Article list (home and category pages): the date, then the title, then
+   the description, stacked */
 .post-list {
     list-style: none;
     padding: 0;
 }
 
 .post-list li {
-    display: flex;
-    align-items: baseline;
-    gap: 16px;
-    padding: 8px 0;
+    padding: 16px 0;
 }
 
 .post-list time {
-    flex: none;
+    display: block;
     font-variant-numeric: tabular-nums;
 }
 
 .post-list h2 {
-    margin: 0;
+    margin: 4px 0 0;
     padding: 0;
     border: 0;
-    font-size: 1rem;
-    font-weight: normal;
+    font-size: 1.2rem;
+}
+
+.post-list p {
+    margin: 6px 0 0;
 }
 
 .post-list h2 a {

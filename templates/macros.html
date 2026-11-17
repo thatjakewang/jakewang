@@ -1,5 +1,8 @@
 {# Macros shared by more than one template. Import with
    {% from "macros.html" import ... %}. #}
 
-{# A date as a machine-readable <time> element. #}
-{% macro time_tag(day) %}<time datetime="{{ day.isoformat() }}">{{ day.isoformat() }}</time>{% endmacro %}
+{# A date as a machine-readable <time> element. Shown as 2026-11-14, or as
+   November 14, 2026 with long=true. #}
+{% macro time_tag(day, long=false) %}<time datetime="{{ day.isoformat() }}">
+    {%- if long %}{{ day.strftime("%B") }} {{ day.day }}, {{ day.year }}{% else %}{{ day.isoformat() }}{% endif -%}
+</time>{% endmacro %}

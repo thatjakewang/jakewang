@@ -1,6 +1,6 @@
 {# A list of articles, newest first: the home page (every category, with a
-   subtitle) and each category's list page. One line per article, the date
-   in front of the title. #}
+   subtitle) and each category's list page. Each article shows its date,
+   then its title, then its description. #}
 {% extends "base.html" %}
 {% from "macros.html" import time_tag %}
 
@@ -11,8 +11,9 @@
     <ul class="post-list">
         {% for post in posts %}
         <li>
-            {{ time_tag(post.date) }}
+            {{ time_tag(post.date, long=true) }}
             <h2><a href="{{ post.url }}">{{ post.title }}</a></h2>
+            {% if post.description %}<p>{{ post.description }}</p>{% endif %}
         </li>
         {% else %}
         <li>No posts yet.</li>
